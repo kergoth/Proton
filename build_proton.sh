@@ -130,7 +130,7 @@ function build_openal
         cd "$TOP"
         mkdir -p build/openal.win32
         cd build/openal.win32
-        $I386_WRAPPER "$CMAKE32" "$TOP"/openal-soft -DCMAKE_C_FLAGS="-m32" -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR32"
+        $I386_WRAPPER "$CMAKE32" "$TOP"/openal-soft -DALSOFT_EXAMPLES=OFF -DCMAKE_C_FLAGS="-m32" -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR32"
         $I386_WRAPPER make $JOBS VERBOSE=1
         $I386_WRAPPER make install VERBOSE=1
 
@@ -138,7 +138,7 @@ function build_openal
         cd "$TOP"
         mkdir -p build/openal.win64
         cd build/openal.win64
-        $AMD64_WRAPPER "$CMAKE64" "$TOP"/openal-soft -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR64"
+        $AMD64_WRAPPER "$CMAKE64" "$TOP"/openal-soft -DALSOFT_EXAMPLES=OFF -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR64"
         $AMD64_WRAPPER make $JOBS VERBOSE=1
         $AMD64_WRAPPER make install VERBOSE=1
     fi
