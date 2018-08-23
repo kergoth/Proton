@@ -288,6 +288,7 @@ function build_wine64
     STRIP="$STRIP" $AMD64_WRAPPER make $JOBS
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $AMD64_WRAPPER make install-lib
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $AMD64_WRAPPER make prefix="$TOOLS_DIR64" libdir="$TOOLS_DIR64/lib64" dlldir="$TOOLS_DIR64/lib64/wine" install-dev install-lib
+    install_name_tool -change "$TOOLS_DIR64/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$TOOLS_DIR64/lib64/wine/dinput.dll.so"
     rm -f "$DST_DIR"/bin/{msiexec,notepad,regedit,regsvr32,wineboot,winecfg,wineconsole,winedbg,winefile,winemine,winepath}
     rm -rf "$DST_DIR/share/man/"
 }
@@ -305,6 +306,7 @@ function build_wine32
     STRIP="$STRIP" $I386_WRAPPER make $JOBS
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $I386_WRAPPER make install-lib
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $I386_WRAPPER make prefix="$TOOLS_DIR32" libdir="$TOOLS_DIR32/lib" dlldir="$TOOLS_DIR32/lib/wine" install-dev install-lib
+    install_name_tool -change "$TOOLS_DIR32/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$TOOLS_DIR32/lib/wine/dinput.dll.so"
 
     #install 32-bit stuff manually, see
     # https://wiki.winehq.org/Packaging#WoW64_Workarounds
