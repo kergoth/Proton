@@ -717,13 +717,13 @@ $(MOLTENVK_OUT) moltenvk: moltenvk-intermediate
 moltenvk-intermediate: $(MAKEFILE_DEP) $(MOLTENVKPROTON) | $(MOLTENVK_OBJ)
 	cd $(MOLTENVK) && ./fetchDependencies
 	mkdir -p $(MOLTENVK_OBJ)/Package
-	cd $(MOLTENVKPROTON) && xcodebuild -scheme 'MoltenVK (Release)' build -derivedDataPath $(abspath $(MOLTENVK_OBJ)) \
+	cd $(MOLTENVKPROTON) && xcodebuild -project MoltenVKPackaging.xcodeproj -scheme MoltenVK-macOS build -derivedDataPath $(abspath $(MOLTENVK_OBJ)) \
 		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED)
 
 	mkdir -p $(TOOLS_DIR64)/include $(TOOLS_DIR64)/lib $(DST_DIR)/lib64
-	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/include/* $(TOOLS_DIR64)/include/
-	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(TOOLS_DIR64)/lib/
-	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(DST_DIR)/lib64/
+	cp -a $(MOLTENVK_OBJ)/Release/MoltenVK.framework/Headers/* $(TOOLS_DIR64)/include/
+	cp -a $(MOLTENVK_OBJ)/Release/libMoltenVK.dylib $(TOOLS_DIR64)/lib/
+	cp -a $(MOLTENVK_OBJ)/Release/libMoltenVK.dylib $(DST_DIR)/lib64/
 endif # ifeq ($(OSX),1)
 
 ##
