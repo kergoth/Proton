@@ -631,9 +631,13 @@ fi
 
 build_openal
 
-build_glslang
+if [ "$PLATFORM" != "Darwin" ]; then
+    # dxvk isn't of any real use on mac until it's able to link to MoltenVK
+    # See https://github.com/KhronosGroup/MoltenVK/issues/203
+    build_glslang
 
-build_dxvk
+    build_dxvk
+fi
 
 case "$BUILD_COMPONENTS" in
     "all")
