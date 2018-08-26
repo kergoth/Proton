@@ -610,7 +610,11 @@ fi
 
 build_openal
 
-build_dxvk
+if [ "$PLATFORM" != "Darwin" ]; then
+    # dxvk isn't of any real use on mac until it's able to link to MoltenVK
+    # See https://github.com/KhronosGroup/MoltenVK/issues/203
+    build_dxvk
+fi
 
 case "$BUILD_COMPONENTS" in
     "all")
@@ -663,6 +667,7 @@ if [ "$PACKAGE" = true ]; then
     WINEPREFIX="$TOP"/build/dist/share/default_pfx/ $RUNTIME_RUNSH ./build/dist/bin/wine64 wineboot
     WINEPREFIX="$TOP"/build/dist/share/default_pfx/ $RUNTIME_RUNSH ./build/dist/bin/wineserver -w
 
+    mkdir -p "$TOP"/build/dist/lib/wine/dxvk "$TOP"/build/dist/lib64/wine/dxvk
     cp -a openvr/bin/win32/openvr_api.dll "$TOP"/build/dist/lib/wine/dxvk/openvr_api_dxvk.dll
     cp -a openvr/bin/win64/openvr_api.dll "$TOP"/build/dist/lib64/wine/dxvk/openvr_api_dxvk.dll
 
