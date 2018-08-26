@@ -658,6 +658,7 @@ case "$BUILD_COMPONENTS" in
     "lsteamclient32") build_lsteamclient32 ;;
     "lsteamclient64") build_lsteamclient64 ;;
     "vrclient_tests") build_vrclient32_tests; build_vrclient64_tests ;;
+    "none") exit 0 ;;
     *) echo "Invalid build components: $BUILD_COMPONENTS" ;;
 esac
 
