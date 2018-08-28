@@ -31,6 +31,10 @@ die()      { err "$@"; exit 1; }
 finish()   { stat "$@"; exit 0; }
 cmd()      { showcmd "$@"; "$@"; }
 
+# Environment
+OSX=""
+[[ $(uname || true) != Darwin ]] || OSX=1
+
 #
 # Configure
 #
@@ -103,6 +107,11 @@ function configure() {
       echo "WITH_FFMPEG := 1"
     fi
 
+    # DXVK?
+    if [[ -n $OSX && ! -n $arg_force_dxvk ]]; then
+        echo "NO_DXVK := 1"
+    fi
+
     # SteamRT
     echo "STEAMRT64_MODE  := $(escape_for_make "$steamrt64_type")"
     echo "STEAMRT64_IMAGE := $(escape_for_make "$steamrt64_name")"
@@ -128,6 +137,7 @@ arg_no_steamrt=""
 arg_ffmpeg=""
 arg_build_name=""
 arg_help=""
+arg_force_dxvk=""
 invalid_args=""
 function parse_args() {
   local arg;
@@ -165,6 +175,8 @@ function parse_args() {
       val_used=1
     elif [[ $arg = --with-ffmpeg ]]; then
       arg_ffmpeg=1
+    elif [[ $arg = --osx-force-dxvk ]]; then
+      arg_force_dxvk=1
     elif [[ $arg = --steam-runtime32 ]]; then
       val_used=1
       arg_steamrt32="$val"
@@ -218,6 +230,8 @@ usage() {
   "$1" ""
   "$1" "    --with-ffmpeg        Build ffmpeg for WMA audio support"
   "$1" ""
+  "$1" "    --osx-force-dxvk     Attempt to build DXVK on OS X - not currently functioning,"
+  "$1" "                         development use"
   "$1" "  Steam Runtime"
   "$1" "    Proton builds that are to be installed & run under the steam client must be built with"
   "$1" "    the Steam Runtime SDK to ensure compatibility.  See README.md for more information."
