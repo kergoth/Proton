@@ -59,26 +59,20 @@ function build_freetype
 function build_libpng
 {
     cd "$TOP"/libpng
-    if [ ! -e 'configure' ]; then
-        sed -i -e 's/libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@/libprotonpng@PNGLIB_MAJOR@@PNGLIB_MINOR@/' Makefile.am
-
-        bash ./autogen.sh
-    fi
-
     if [ ! -e "$TOOLS_DIR64"/lib/libprotonpng16."$LIB_SUFFIX" ]; then
         #libpng 32-bit
         mkdir -p "$TOP"/build/libpng.win32
         cd "$TOP"/build/libpng.win32
-        "$TOP"/libpng/configure --prefix="$TOOLS_DIR32" --host i686-apple-darwin CFLAGS='-m32 -g -O2' LDFLAGS=-m32
-        make $JOBS
-        make install
+        $I386_WRAPPER "$CMAKE32" "$TOP"/libpng -DPNG_LIB_NAME=pngproton -DPNG_SHARED=ON -DPNG_STATIC=OFF -DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR32"
+        $AMD64_WRAPPER make $JOBS VERBOSE=1
+        $AMD64_WRAPPER make install VERBOSE=1
 
         #libpng 64-bit
         mkdir -p "$TOP"/build/libpng.win64
         cd "$TOP"/build/libpng.win64
-        "$TOP"/libpng/configure --prefix="$TOOLS_DIR64" --host x86_64-apple-darwin
-        make $JOBS
-        make install
+        $AMD64_WRAPPER "$CMAKE64" "$TOP"/libpng -DPNG_LIB_NAME=pngproton -DPNG_SHARED=ON -DPNG_STATIC=OFF -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR64"
+        $AMD64_WRAPPER make $JOBS VERBOSE=1
+        $AMD64_WRAPPER make install VERBOSE=1
     fi
 
     cp "$TOOLS_DIR32"/lib/libprotonpng16.dylib "$DST_DIR"/lib
