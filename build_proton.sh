@@ -29,31 +29,34 @@ function build_freetype
 {
     cd "$TOP"/freetype2
 
-    if [ ! -e "$TOOLS_DIR64"/lib/libprotonfreetype."$LIB_SUFFIX" ]; then
-        sed -i -e 's/^LIBRARY.*/LIBRARY=libprotonfreetype/' builds/unix/unix-cc.in
-
-        bash ./autogen.sh
+    if [ ! -e "$TOOLS_DIR64"/lib/libprotonfreetype.2.9."$LIB_SUFFIX" ]; then
+        sed -i -ebak '/protonfreetype/d' CMakeLists.txt
+        echo 'set_target_properties(freetype PROPERTIES OUTPUT_NAME protonfreetype)' >>CMakeLists.txt
 
         #freetype 32-bit
-        mkdir -p "$TOP"/build/freetype.win32
-        cd "$TOP"/build/freetype.win32
-        "$TOP"/freetype2/configure --prefix="$TOOLS_DIR32" --without-png --host i686-apple-darwin CFLAGS='-m32 -g -O2' LDFLAGS=-m32 PKG_CONFIG=false
-        make $JOBS
-        make install
+        cd "$TOP"
+        mkdir -p build/freetype.win32
+        cd build/freetype.win32
+        $I386_WRAPPER "$CMAKE32" "$TOP"/freetype2 -DBUILD_SHARED_LIBS=ON -DWITH_PNG=OFF -DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR32"
+        $I386_WRAPPER make $JOBS VERBOSE=1
+        $I386_WRAPPER make install VERBOSE=1
+        install_name_tool -id "$TOOLS_DIR32"/lib/libprotonfreetype.2.9.dylib "$TOOLS_DIR32"/lib/libprotonfreetype.2.9.dylib
 
         #freetype 64-bit
-        mkdir -p "$TOP"/build/freetype.win64
-        cd "$TOP"/build/freetype.win64
-        "$TOP"/freetype2/configure --prefix="$TOOLS_DIR64" --without-png --host x86_64-apple-darwin PKG_CONFIG=false
-        make $JOBS
-        make install
+        cd "$TOP"
+        mkdir -p build/freetype.win64
+        cd build/freetype.win64
+        $AMD64_WRAPPER "$CMAKE64" "$TOP"/freetype2 -DBUILD_SHARED_LIBS=ON -DWITH_PNG=OFF -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR64"
+        $AMD64_WRAPPER make $JOBS VERBOSE=1
+        $AMD64_WRAPPER make install VERBOSE=1
+        install_name_tool -id "$TOOLS_DIR64"/lib/libprotonfreetype.2.9.dylib "$TOOLS_DIR64"/lib/libprotonfreetype.2.9.dylib
     fi
 
-    cp "$TOOLS_DIR32"/lib/libprotonfreetype.dylib "$DST_DIR"/lib
-    $STRIP "$DST_DIR"/lib/libprotonfreetype.dylib
+    cp "$TOOLS_DIR32"/lib/libprotonfreetype.2.9.dylib "$DST_DIR"/lib
+    $STRIP "$DST_DIR"/lib/libprotonfreetype.2.9.dylib
 
-    cp "$TOOLS_DIR64"/lib/libprotonfreetype.dylib "$DST_DIR"/lib64
-    $STRIP "$DST_DIR"/lib64/libprotonfreetype.dylib
+    cp "$TOOLS_DIR64"/lib/libprotonfreetype.2.9.dylib "$DST_DIR"/lib64
+    $STRIP "$DST_DIR"/lib64/libprotonfreetype.2.9.dylib
 }
 
 function build_libpng
@@ -566,11 +569,11 @@ if [ "$PLATFORM" == "Darwin" ]; then
 
     FREETYPE32_CFLAGS="-I$TOOLS_DIR32/include/freetype2"
     FREETYPE32_LIBS="-L$TOOLS_DIR32/lib -lprotonfreetype -framework CoreServices -framework ApplicationServices -lz"
-    ac_cv_lib_soname_freetype32=libprotonfreetype.dylib
+    ac_cv_lib_soname_freetype32=libprotonfreetype.2.9.dylib
 
     FREETYPE64_CFLAGS="-I$TOOLS_DIR64/include/freetype2"
     FREETYPE64_LIBS="-L$TOOLS_DIR64/lib -lprotonfreetype"
-    ac_cv_lib_soname_freetype64=libprotonfreetype.dylib
+    ac_cv_lib_soname_freetype64=libprotonfreetype.2.9.dylib
 
 
     build_libpng
