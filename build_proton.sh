@@ -99,21 +99,22 @@ function build_libjpeg
     #homebrew or the like and put it into your PATH
 
     if [ ! -e "$TOOLS_DIR64"/lib/libprotonjpeg."$LIB_SUFFIX" ]; then
+        sed -i -ebak '/protonjpeg/d' sharedlib/CMakeLists.txt
+        echo 'set_target_properties(jpeg PROPERTIES OUTPUT_NAME protonjpeg)' >>sharedlib/CMakeLists.txt
+
         #libjpeg 32-bit
         mkdir -p "$TOP"/build/libjpeg.win32
         cd "$TOP"/build/libjpeg.win32
-        "$TOP"/libjpeg-turbo/configure --prefix="$TOOLS_DIR32" --host i686-apple-darwin CFLAGS='-O3 -g -m32' LDFLAGS=-m32
-        make $JOBS
-        make install
-        mv "$TOOLS_DIR32"/lib/lib{,proton}jpeg.dylib
+        $I386_WRAPPER "$CMAKE32" "$TOP"/libjpeg-turbo -DENABLE_STATIC=OFF -DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32 -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR32"
+        $AMD64_WRAPPER make $JOBS VERBOSE=1
+        $AMD64_WRAPPER make install VERBOSE=1
 
         #libjpeg 64-bit
         mkdir -p "$TOP"/build/libjpeg.win64
         cd "$TOP"/build/libjpeg.win64
-        "$TOP"/libjpeg-turbo/configure --prefix="$TOOLS_DIR64" --host x86_64-apple-darwin
-        make $JOBS
-        make install
-        mv "$TOOLS_DIR64"/lib/lib{,proton}jpeg.dylib
+        $AMD64_WRAPPER "$CMAKE64" "$TOP"/libjpeg-turbo -DENABLE_STATIC=OFF -DCMAKE_INSTALL_PREFIX="$TOOLS_DIR64"
+        $AMD64_WRAPPER make $JOBS VERBOSE=1
+        $AMD64_WRAPPER make install VERBOSE=1
     fi
 
     cp "$TOOLS_DIR32"/lib/libprotonjpeg.dylib "$DST_DIR"/lib/
