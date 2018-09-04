@@ -527,6 +527,8 @@ elif sys.argv[1] == "waitforexitandrun":
     run_wine([bindir + "/wineserver", "-w"])
     #then run
     run()
+elif sys.argv[1] == "rundirect":
+    run_wine(sys.argv[2:])
 elif sys.argv[1] == "getcompatpath":
     #linux -> windows path
     path = subprocess.check_output([wine_path, "winepath", "-w", sys.argv[2]], env=env, stderr=lfile)
