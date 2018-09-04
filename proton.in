@@ -246,7 +246,17 @@ if "SteamGameId" in env:
 else:
     env["WINEDEBUG"] = "-all"
 
-prefix_lock = FileLock(os.environ["STEAM_COMPAT_DATA_PATH"] + "/pfx.lock", timeout=-1)
+prefix_lockfile = os.environ["STEAM_COMPAT_DATA_PATH"] + "/pfx.lock"
+if not os.path.exists(prefix_lockfile):
+    import errno
+    try:
+        os.makedirs(os.environ["STEAM_COMPAT_DATA_PATH"])
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+    open(prefix_lockfile, 'w').close()
+    
+prefix_lock = FileLock(prefix_lockfile, timeout=-1)
 with prefix_lock:
     version_file = os.environ["STEAM_COMPAT_DATA_PATH"] + "/version"
     if os.path.exists(version_file):
