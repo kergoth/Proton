@@ -552,6 +552,8 @@ elif sys.argv[1] == "waitforexitandrun":
     run()
 elif sys.argv[1] == "rundirect":
     run_wine(sys.argv[2:])
+elif sys.argv[1] == "dumpenv":
+    dump_dbg_env(sys.stdout)
 elif sys.argv[1] == "getcompatpath":
     #linux -> windows path
     path = subprocess.check_output([wine_path, "winepath", "-w", sys.argv[2]], env=env, stderr=lfile)
