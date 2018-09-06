@@ -189,6 +189,9 @@ JPEG32_CFLAGS     := -I$(abspath $(TOOLS_DIR32))/include
 JPEG32_LIBS       := -L$(abspath $(TOOLS_DIR32))/lib -lprotonjpeg
 JPEG64_CFLAGS     := -I$(abspath $(TOOLS_DIR64))/include
 JPEG64_LIBS       := -L$(abspath $(TOOLS_DIR64))/lib -lprotonjpeg
+
+export XML2_CFLAGS := $(xml2-config --cflags)
+export XML2_LIBS := $(xml2-config --libs)
 endif
 
 # Make magic: We don't want the variables listed here to be lists, just single elements with spaces in them for passing
