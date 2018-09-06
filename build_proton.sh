@@ -161,6 +161,7 @@ function build_libSDL
         make $JOBS
         make install-hdrs
         make install-lib
+        # install_name_tool -id "@rpath/libSDL2.dylib" "$TOOLS_DIR32"/lib/libSDL2.dylib
 
         #libsdl2 64-bit
         cd "$TOP"
@@ -170,6 +171,7 @@ function build_libSDL
         make $JOBS
         make install-hdrs
         make install-lib
+        # install_name_tool -id "@rpath/libSDL2.dylib" "$TOOLS_DIR64"/lib/libSDL2.dylib
     fi
 
     cp "$TOOLS_DIR32"/lib/libSDL2."$LIB_SUFFIX" "$DST_DIR"/lib
@@ -231,6 +233,8 @@ function build_ffmpeg
                 --enable-decoder=adpcm_ms
         $I386_WRAPPER make $JOBS
         $I386_WRAPPER make install
+        install_name_tool -id "@rpath/libavcodec.58.dylib" "$TOOLS_DIR32"/lib/libavcodec.58.*.dylib
+        install_name_tool -id "@rpath/libavutil.56.dylib" "$TOOLS_DIR32"/lib/libavutil.56.*.dylib
 
 
         #ffmpeg 64-bit
@@ -265,6 +269,8 @@ function build_ffmpeg
                 --enable-decoder=adpcm_ms
         $AMD64_WRAPPER make $JOBS
         $AMD64_WRAPPER make install
+        install_name_tool -id "@rpath/libavcodec.58.dylib" "$TOOLS_DIR64"/lib/libavcodec.58.*.dylib
+        install_name_tool -id "@rpath/libavutil.56.dylib" "$TOOLS_DIR64"/lib/libavutil.56.*.dylib
     fi
 
     cp -L "$TOOLS_DIR32"/lib/libavcodec* "$DST_DIR"/lib/
@@ -286,7 +292,12 @@ function build_wine64
     STRIP="$STRIP" $AMD64_WRAPPER make $JOBS
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $AMD64_WRAPPER make install-lib
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $AMD64_WRAPPER make prefix="$TOOLS_DIR64" libdir="$TOOLS_DIR64/lib64" dlldir="$TOOLS_DIR64/lib64/wine" install-dev install-lib
-    install_name_tool -change "$TOOLS_DIR64/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$TOOLS_DIR64/lib64/wine/dinput.dll.so"
+    # if [ "$PLATFORM" == "Darwin" ]; then
+    #     # Fix hardcoded absolute paths to libs we linked against
+    #     install_name_tool -change "$TOOLS_DIR64/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$TOOLS_DIR64/lib64/wine/dinput.dll.so"
+    #     find "$TOOLS_DIR64/lib64/wine" -name xaudio\*.so -print0 | xargs -0 install_name_tool -change "$TOOLS_DIR64/lib/libavutil.56.dylib" "@rpath/libavutil.56.dylib"
+    #     find "$TOOLS_DIR64/lib64/wine" -name xaudio\*.so -print0 | xargs -0 install_name_tool -change "$TOOLS_DIR64/lib/libavcodec.58.dylib" "@rpath/libavcodec.58.dylib"
+    # fi
     rm -f "$DST_DIR"/bin/{msiexec,notepad,regedit,regsvr32,wineboot,winecfg,wineconsole,winedbg,winefile,winemine,winepath}
     rm -rf "$DST_DIR/share/man/"
 }
@@ -304,7 +315,12 @@ function build_wine32
     STRIP="$STRIP" $I386_WRAPPER make $JOBS
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $I386_WRAPPER make install-lib
     INSTALL_PROGRAM_FLAGS="$INSTALL_PROGRAM_FLAGS" STRIP="$STRIP" $I386_WRAPPER make prefix="$TOOLS_DIR32" libdir="$TOOLS_DIR32/lib" dlldir="$TOOLS_DIR32/lib/wine" install-dev install-lib
-    install_name_tool -change "$TOOLS_DIR32/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$TOOLS_DIR32/lib/wine/dinput.dll.so"
+    # if [ "$PLATFORM" == "Darwin" ]; then
+    #     # Fix hardcoded absolute paths to libs we linked against
+    #     install_name_tool -change "$TOOLS_DIR32/lib/libSDL2-2.0.0.dylib" "@rpath/SDL2.dylib" "$TOOLS_DIR32/lib/wine/dinput.dll.so"
+    #     find "$TOOLS_DIR32/lib/wine" -name xaudio\*.so -print0 | xargs -0 install_name_tool -change "$TOOLS_DIR32/lib/libavutil.56.dylib" "@rpath/libavutil.56.dylib"
+    #     find "$TOOLS_DIR32/lib/wine" -name xaudio\*.so -print0 | xargs -0 install_name_tool -change "$TOOLS_DIR32/lib/libavcodec.58.dylib" "@rpath/libavcodec.58.dylib"
+    # fi
 
     #install 32-bit stuff manually, see
     # https://wiki.winehq.org/Packaging#WoW64_Workarounds
