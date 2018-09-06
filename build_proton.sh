@@ -612,6 +612,10 @@ if [ "$PLATFORM" == "Darwin" ]; then
     build_libSDL
 
     build_moltenvk
+
+    XML2_CFLAGS="$(xml2-config --cflags)"
+    XML2_LIBS="$(xml2-config --libs)"
+    export XML2_CFLAGS XML2_LIBS
 fi
 
 if [ "$WITH_FFMPEG" = 1 ]; then
