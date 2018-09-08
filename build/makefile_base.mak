@@ -469,6 +469,7 @@ FREETYPE_CONFIGURE_FILES64 := $(FREETYPE_OBJ64)/unix-cc.mk $(FREETYPE_OBJ64)/Mak
 $(FREETYPE_CONFIGURE_FILES64): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FREETYPE_OBJ64)
 	cd $(dir $@) && \
 		$(abspath $(FREETYPE)/configure) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED) PKG_CONFIG=false \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
 			--prefix=$(abspath $(TOOLS_DIR64)) --without-png --host x86_64-apple-darwin && \
 		echo 'LIBRARY := libprotonfreetype' >> unix-cc.mk
 
@@ -476,7 +477,7 @@ $(FREETYPE_CONFIGURE_FILES64): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FRE
 $(FREETYPE_CONFIGURE_FILES32): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FREETYPE_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(FREETYPE)/configure) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED) PKG_CONFIG=false \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32 \
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)" \
 			--prefix=$(abspath $(TOOLS_DIR32)) --without-png --host i686-apple-darwin && \
 		echo 'LIBRARY := libprotonfreetype' >> unix-cc.mk
 
@@ -547,13 +548,14 @@ LIBPNG_CONFIGURE_FILES64 := $(LIBPNG_OBJ64)/Makefile
 # 64-bit configure
 $(LIBPNG_CONFIGURE_FILES64): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPROTON) | $(LIBPNG_OBJ64)
 	cd $(dir $@) && \
-		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin
+		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 # 32bit-configure
 $(LIBPNG_CONFIGURE_FILES32): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPROTON) | $(LIBPNG_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libpng goals
 LIBPNG_TARGETS = libpng libpng32 libpng64 libpng_configure libpng_configure32 libpng_configure64
@@ -618,13 +620,14 @@ LIBJPEG_CONFIGURE_FILES64 := $(LIBJPEG_OBJ64)/Makefile
 # 64-bit configure
 $(LIBJPEG_CONFIGURE_FILES64): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ64)
 	cd $(dir $@) && \
-		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin
+		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-O3 -g $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 # 32bit-configure
 $(LIBJPEG_CONFIGURE_FILES32): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-O3 -g -m32' LDFLAGS=-m32
+			CFLAGS="-O3 -g -m32 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libjpeg goals
 LIBJPEG_TARGETS = libjpeg libjpeg32 libjpeg64 libjpeg_configure libjpeg_configure32 libjpeg_configure64
@@ -746,13 +749,14 @@ LIBSDL_CONFIGURE_FILES64 := $(LIBSDL_OBJ64)/Makefile
 # 64-bit configure
 $(LIBSDL_CONFIGURE_FILES64): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ64)
 	cd $(dir $@) && \
-		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin
+		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
 
 # 32bit-configure
 $(LIBSDL_CONFIGURE_FILES32): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libsdl goals
 LIBSDL_TARGETS = libsdl libsdl32 libsdl64 libsdl_configure libsdl_configure32 libsdl_configure64
