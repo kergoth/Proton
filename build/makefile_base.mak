@@ -441,7 +441,7 @@ $(FREETYPE_CONFIGURE_FILES64): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FRE
 $(FREETYPE_CONFIGURE_FILES32): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FREETYPE_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(FREETYPE)/configure) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED) PKG_CONFIG=false \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32 \
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)" \
 			--prefix=$(abspath $(TOOLS_DIR32)) --without-png --host i686-apple-darwin && \
 		echo 'LIBRARY := libprotonfreetype' >> unix-cc.mk
 
@@ -518,7 +518,7 @@ $(LIBPNG_CONFIGURE_FILES64): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPRO
 $(LIBPNG_CONFIGURE_FILES32): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPROTON) | $(LIBPNG_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libpng goals
 LIBPNG_TARGETS = libpng libpng32 libpng64 libpng_configure libpng_configure32 libpng_configure64
@@ -589,7 +589,7 @@ $(LIBJPEG_CONFIGURE_FILES64): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEG
 $(LIBJPEG_CONFIGURE_FILES32): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-O3 -g -m32' LDFLAGS=-m32
+			CFLAGS="-O3 -g -m32 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libjpeg goals
 LIBJPEG_TARGETS = libjpeg libjpeg32 libjpeg64 libjpeg_configure libjpeg_configure32 libjpeg_configure64
@@ -717,7 +717,7 @@ $(LIBSDL_CONFIGURE_FILES64): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPRO
 $(LIBSDL_CONFIGURE_FILES32): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ32)
 	cd $(dir $@) && \
 		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS='-m32 -g -O2' LDFLAGS=-m32
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libsdl goals
 LIBSDL_TARGETS = libsdl libsdl32 libsdl64 libsdl_configure libsdl_configure32 libsdl_configure64
@@ -996,7 +996,7 @@ lsteamclient64: SHELL = $(CONTAINER_SHELL64)
 lsteamclient64: $(LSTEAMCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
 	cd $(LSTEAMCLIENT_OBJ64) && \
 		PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
-		CXXFLAGS="-Wno-attributes -O2" CFLAGS="-O2 -g" $(MAKE) && \
+		CXXFLAGS="-Wno-attributes -O2 $(CXXFLAGS) $(CFLAGS)" CFLAGS="-O2 -g $(CFLAGS)" $(MAKE) && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(LSTEAMCLIENT_OBJ64)/lsteamclient.dll.so && \
 		cp -a ./lsteamclient.dll.so ../$(DST_DIR)/lib64/wine/
 
@@ -1004,7 +1004,7 @@ lsteamclient32: SHELL = $(CONTAINER_SHELL32)
 lsteamclient32: $(LSTEAMCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
 	cd $(LSTEAMCLIENT_OBJ32) && \
 		PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
-		LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes -O2" CFLAGS="-m32 -O2 -g" \
+		LDFLAGS="-m32 $(LDFLAGS) " CXXFLAGS="-m32 -Wno-attributes -O2 $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 -O2 -g $(CFLAGS)" \
 			$(MAKE) && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(LSTEAMCLIENT_OBJ32)/lsteamclient.dll.so && \
 		cp -a ./lsteamclient.dll.so ../$(DST_DIR)/lib/wine/
@@ -1031,8 +1031,8 @@ $(WINE_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
 $(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WINE_OBJ64) $(WINE_ORDER_DEPS64)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS=-I$(abspath $(TOOLS_DIR64))"/include -g -O2" \
-		LDFLAGS=-L$(abspath $(TOOLS_DIR64))/lib \
+		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -g -O2 $(CFLAGS)" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib $(LDFLAGS)" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR64))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
 		CXX=$(CXX_QUOTED) \
@@ -1052,8 +1052,8 @@ $(WINE_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
 $(WINE_CONFIGURE_FILES32): $(MAKEFILE_DEP) | $(WINE_OBJ32) $(WINE_ORDER_DEPS32)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS=-I$(abspath $(TOOLS_DIR32))"/include -g -O2" \
-		LDFLAGS=-L$(abspath $(TOOLS_DIR32))/lib \
+		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -g -O2 $(CFLAGS)" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR32))/lib $(LDFLAGS)" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR32))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
 		CXX=$(CXX_QUOTED) \
@@ -1200,7 +1200,7 @@ vrclient: vrclient32 vrclient64
 vrclient64: SHELL = $(CONTAINER_SHELL64)
 vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
 	cd $(VRCLIENT_OBJ64) && \
-		CXXFLAGS="-Wno-attributes -std=c++0x -O2 -g" CFLAGS="-O2 -g" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
+		CXXFLAGS="-Wno-attributes -std=c++0x -O2 -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-O2 -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 			$(MAKE) && \
 		PATH=$(abspath $(TOOLS_DIR64))/bin:$(PATH) \
 			winebuild --dll --fake-module -E ../$(VRCLIENT)/vrclient_x64/vrclient_x64.spec -o vrclient_x64.dll.fake && \
@@ -1211,7 +1211,7 @@ vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKE
 vrclient32: SHELL = $(CONTAINER_SHELL32)
 vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
 	cd $(VRCLIENT_OBJ32) && \
-		LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes -std=c++0x -O2 -g" CFLAGS="-m32 -O2 -g" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
+		LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes -std=c++0x -O2 -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 -O2 -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 			$(MAKE) && \
 		PATH=$(abspath $(TOOLS_DIR32))/bin:$(PATH) \
 			winebuild --dll --fake-module -E ../$(VRCLIENT32)/vrclient/vrclient.spec -o vrclient.dll.fake && \
