@@ -31,3 +31,6 @@
 [submodule "cmake"]
 	path = cmake
 	url = https://github.com/Kitware/CMake
+[submodule "vkd3d"]
+	path = vkd3d
+	url = git://source.winehq.org/git/vkd3d.git
