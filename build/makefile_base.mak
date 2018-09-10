@@ -321,6 +321,16 @@ MOLTENVKPROTON := ./syn-MoltenVK
 MOLTENVK_OBJ := ./obj-moltenvk
 MOLTENVK_OUT := $(TOOLS_DIR64)/lib/libMoltenVK.dylib
 
+VKD3D := $(SRCDIR)/vkd3d
+VKD3DSYN    := ./syn-vkd3d
+VKD3D_OBJ32 := ./obj-vkd3d32
+VKD3D_OBJ64 := ./obj-vkd3d64
+VKD3D_OUT32 := $(TOOLS_DIR32)/lib/libvkd3d.dylib
+VKD3D_OUT64 := $(TOOLS_DIR64)/lib/libvkd3d.dylib
+
+SPIRV_HEADERS := $(SRCDIR)/spirv-headers
+VKD3D_REL_HEADERS := $(SRCDIR)/vkd3d-idl-headers
+
 ## Object directories
 OBJ_DIRS := $(TOOLS_DIR32)        $(TOOLS_DIR64)        \
             $(FREETYPE_OBJ32)     $(FREETYPE_OBJ64)     \
@@ -334,6 +344,7 @@ OBJ_DIRS := $(TOOLS_DIR32)        $(TOOLS_DIR64)        \
             $(LIBPNG_OBJ32)       $(LIBPNG_OBJ64)       \
             $(LIBJPEG_OBJ32)      $(LIBJPEG_OBJ64)      \
             $(LIBSDL_OBJ32)       $(LIBSDL_OBJ64)       \
+            $(VKD3D_OBJ32)        $(VKD3D_OBJ64)        \
             $(MOLTENVK_OBJ)
 
 $(OBJ_DIRS):
@@ -808,6 +819,90 @@ openal32: $(OPENAL_CONFIGURE_FILES32)
 		cp -L ../$(TOOLS_DIR32)/lib/libopenal* ../$(DST_DIR)/lib/ && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(DST_DIR)/lib/libopenal.$(LIB_SUFFIX)
 
+VKD3D_AUTOGEN_FILES   := $(VKD3DSYN)/configure
+
+$(VKD3D_AUTOGEN_FILES): $(VKD3D) $(MAKEFILE_DEP) $(VKD3D)/configure.ac $(VKD3D)/autogen.sh
+	rm -rf ./$(VKD3DSYN)
+	mkdir -p $(VKD3DSYN)/
+	cd $(VKD3DSYN)/ && \
+		ln -sfv ../$(VKD3D)/* .
+	rm -f $(VKD3DSYN)/configure
+	cd $(VKD3DSYN) && ./autogen.sh
+
+## Create & configure object directory for vkd3d
+
+VKD3D_CONFIGURE_FILES32 := $(VKD3D_OBJ32)/Makefile
+VKD3D_CONFIGURE_FILES64 := $(VKD3D_OBJ64)/Makefile
+
+VKD3D_ORDER_DEPS :=
+ifeq ($(OSX),1)
+	VKD3D_ORDER_DEPS += $(MOLTENVK_OUT)
+endif
+
+# 64-bit configure
+$(VKD3D_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
+$(VKD3D_CONFIGURE_FILES64): $(VKD3D_AUTOGEN_FILES) $(MAKEFILE_DEP) $(VKD3DSYN) $(VKD3D_ORDER_DEPS) | $(VKD3D_OBJ64)
+	cd $(dir $@) && \
+		STRIP=$(STRIP_QUOTED) \
+		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(VKD3D_IDL_HEADERS))/include -I$(abspath $(SPIRV_HEADERS))/include -g -O2" \
+		CPPFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(VKD3D_IDL_HEADERS))/include -I$(abspath $(SPIRV_HEADERS))/include" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib" \
+		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR64))/lib/pkgconfig \
+		CC=$(CC_QUOTED) \
+		CXX=$(CXX_QUOTED) \
+		$(abspath $(VKD3DSYN)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin
+
+# 32bit-configure
+$(VKD3D_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
+$(VKD3D_CONFIGURE_FILES32): $(VKD3D_AUTOGEN_FILES) $(MAKEFILE_DEP) $(VKD3DSYN) $(VKD3D_ORDER_DEPS) | $(VKD3D_OBJ32)
+	cd $(dir $@) && \
+		STRIP=$(STRIP_QUOTED) \
+		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(SPIRV_HEADERS))/include -m64 -g -O2" \
+		CPPFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(VKD3D_IDL_HEADERS))/include -I$(abspath $(SPIRV_HEADERS))/include" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib -m64" \
+		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR32))/lib/pkgconfig \
+		CC=$(CC_QUOTED) \
+		CXX=$(CXX_QUOTED) \
+		$(abspath $(VKD3DSYN)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin
+
+## Vkd3d goals
+VKD3D_TARGETS = vkd3d vkd3d32 vkd3d64 vkd3d_configure vkd3d_configure32 vkd3d_configure64
+
+ALL_TARGETS += $(VKD3D_TARGETS)
+GOAL_TARGETS_LIBS += vkd3d
+
+.PHONY: $(VKD3D_TARGETS)
+
+vkd3d_configure: $(VKD3D_CONFIGURE_FILES32) $(VKD3D_CONFIGURE_FILES64)
+
+vkd3d_configure64: $(VKD3D_CONFIGURE_FILES64)
+
+vkd3d_configure32: $(VKD3D_CONFIGURE_FILES32)
+
+vkd3d: vkd3d32 vkd3d64
+
+# Make silliness to make both the explicit vkd3d goal and the outfile come from the same recipe
+.INTERMEDIATE: vkd3d64-intermediate vkd3d32-intermediate
+
+$(VKD3D_OUT64) vkd3d64: vkd3d64-intermediate
+
+$(VKD3D_OUT32) vkd3d32: vkd3d32-intermediate
+
+vkd3d64-intermediate: SHELL = $(CONTAINER_SHELL64)
+vkd3d64-intermediate: $(VKD3D_CONFIGURE_FILES64)
+	$(MAKE) -C $(VKD3D_OBJ64)
+	$(MAKE) -C $(VKD3D_OBJ64) install-hdrs
+	$(MAKE) -C $(VKD3D_OBJ64) install-lib
+	cp $(VKD3D_OUT64) $(DST_DIR)/lib64
+	$(STRIP) $(DST_DIR)/lib64/libvkd3d.dylib
+
+vkd3d64-intermediate: SHELL = $(CONTAINER_SHELL32)
+vkd3d32-intermediate: $(VKD3D_CONFIGURE_FILES32)
+	$(MAKE) -C $(VKD3D_OBJ32)
+	$(MAKE) -C $(VKD3D_OBJ32) install-hdrs
+	$(MAKE) -C $(VKD3D_OBJ32) install-lib
+	cp $(VKD3D_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libvkd3d.dylib
 
 ##
 ## ffmpeg
@@ -1007,8 +1102,8 @@ WINE_CONFIGURE_FILES32 := $(WINE_OBJ32)/Makefile
 WINE_CONFIGURE_FILES64 := $(WINE_OBJ64)/Makefile
 
 # On OS X we need ordering dependencies on these projects so configure can find them properly
-WINE_ORDER_DEPS64 :=
-WINE_ORDER_DEPS32 :=
+WINE_ORDER_DEPS64 = $(VKD3D_OUT64)
+WINE_ORDER_DEPS32 = $(VKD3D_OUT32)
 ifeq ($(OSX),1)
 	WINE_ORDER_DEPS64 += $(FREETYPE_OUT64) $(LIBPNG_OUT64) $(LIBJPEG_OUT64) $(LIBSDL_OUT64) $(MOLTENVK_OUT)
 	WINE_ORDER_DEPS32 += $(FREETYPE_OUT32) $(LIBPNG_OUT32) $(LIBJPEG_OUT32) $(LIBSDL_OUT32) $(MOLTENVK_OUT)
