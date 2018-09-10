@@ -636,8 +636,6 @@ endif # ifeq ($(OSX),1)
 ##
 
 ifeq ($(OSX),1) # currently only for OS X builds
-ifneq ($(NO_DXVK),1) # May be disabled by configure
-
 ## Symlink'd moltenvk directory because it has hard-coded build steps that look for ./Package
 $(MOLTENVKPROTON)/.created: $(MOLTENVK) $(MAKEFILE_DEP) $(MOLTENVK_OBJ) | $(MOLTENVK)/External
 	rm -rf ./$(MOLTENVKPROTON)
@@ -681,8 +679,6 @@ moltenvk-intermediate: $(MAKEFILE_DEP) $(MOLTENVKPROTON) | $(MOLTENVK_OBJ)
 	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/include/* $(TOOLS_DIR64)/include/
 	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(TOOLS_DIR64)/lib/
 	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(DST_DIR)/lib64/
-
-endif # ifneq($(NO_DXVK),1)
 endif # ifeq ($(OSX),1)
 
 ##
