@@ -473,12 +473,14 @@ $(FREETYPE_OUT32) freetype32: freetype32-intermediate
 freetype64-intermediate: $(FREETYPE_CONFIGURE_FILES64)
 	$(MAKE) -C $(FREETYPE_OBJ64)
 	$(MAKE) -C $(FREETYPE_OBJ64) install
+	mkdir -p $(DST_DIR)/lib64
 	cp $(FREETYPE_OUT64) $(DST_DIR)/lib64
 	$(STRIP) $(DST_DIR)/lib64/libprotonfreetype.dylib
 
 freetype32-intermediate: $(FREETYPE_CONFIGURE_FILES32)
 	$(MAKE) -C $(FREETYPE_OBJ32)
 	$(MAKE) -C $(FREETYPE_OBJ32) install
+	mkdir -p $(DST_DIR)/lib
 	cp $(FREETYPE_OUT32) $(DST_DIR)/lib
 	$(STRIP) $(DST_DIR)/lib/libprotonfreetype.dylib
 
