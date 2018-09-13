@@ -255,7 +255,7 @@ if not os.path.exists(prefix_lockfile):
         if exc.errno != errno.EEXIST:
             raise
     open(prefix_lockfile, 'w').close()
-    
+
 prefix_lock = FileLock(prefix_lockfile, timeout=-1)
 with prefix_lock:
     version_file = os.environ["STEAM_COMPAT_DATA_PATH"] + "/version"
@@ -279,7 +279,7 @@ with prefix_lock:
         steamdir = os.environ["STEAM_COMPAT_CLIENT_INSTALL_PATH"]
     else:
         #linux-only fallback, really shouldn't get here
-        steamdir = os.environ["HOME"] + ".steam/root/"
+        steamdir = os.environ["HOME"] + "/.steam/root/"
     dst = prefix + "/drive_c/Program Files (x86)/"
     makedirs(dst + "Steam")
     filestocopy = ["steamclient.dll",
