@@ -1098,7 +1098,13 @@ wine64-intermediate: SHELL = $(CONTAINER_SHELL64)
 wine64-intermediate: $(WINE_CONFIGURE_FILES64)
 	cd $(WINE_OBJ64) && \
 		STRIP=$(STRIP_QUOTED) \
-			$(MAKE) && \
+			$(MAKE)
+ifeq ($(OSX),1)
+	find $(WINE_OBJ64) -name dinput.dll.so
+	find $(WINE_OBJ64) -name xaudio*.so
+	exit 1
+endif
+	cd $(WINE_OBJ64) && \
 		INSTALL_PROGRAM_FLAGS=$(INSTALL_PROGRAM_FLAGS) STRIP=$(STRIP_QUOTED) \
 			$(MAKE) install-lib && \
 		INSTALL_PROGRAM_FLAGS=$(INSTALL_PROGRAM_FLAGS) STRIP=$(STRIP_QUOTED) \
@@ -1117,7 +1123,13 @@ wine32-intermediate: SHELL = $(CONTAINER_SHELL32)
 wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 	cd $(WINE_OBJ32) && \
 		STRIP=$(STRIP_QUOTED) \
-			$(MAKE) && \
+			$(MAKE)
+ifeq ($(OSX),1)
+	find $(WINE_OBJ32) -name dinput.dll.so
+	find $(WINE_OBJ32) -name xaudio*.so
+	exit 1
+endif
+	cd $(WINE_OBJ32) && \
 		INSTALL_PROGRAM_FLAGS=$(INSTALL_PROGRAM_FLAGS) STRIP=$(STRIP_QUOTED) \
 			$(MAKE) install-lib && \
 		INSTALL_PROGRAM_FLAGS=$(INSTALL_PROGRAM_FLAGS) STRIP=$(STRIP_QUOTED) \
