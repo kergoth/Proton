@@ -165,6 +165,7 @@ CXXFLAGS       += $(COMMON_FLAGS)
 
 # OS X specific
 ifeq ($(OSX),1)
+NO_DXVK = 1
 STRIP := strip -x
 LIB_SUFFIX := dylib
 WINE32_AUTOCONF := --without-x \
