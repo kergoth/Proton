@@ -842,7 +842,7 @@ openal64: $(OPENAL_CONFIGURE_FILES64)
 	+$(MAKE) -C $(OPENAL_OBJ64) install VERBOSE=1
 	mkdir -p $(DST_DIR)/lib64
 	cp -L $(TOOLS_DIR64)/lib/libopenal* $(DST_DIR)/lib64/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libopenal.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libopenal.$(LIB_SUFFIX)
 
 
 openal32: SHELL = $(CONTAINER_SHELL32)
@@ -851,7 +851,7 @@ openal32: $(OPENAL_CONFIGURE_FILES32)
 	+$(MAKE) -C $(OPENAL_OBJ32) install VERBOSE=1
 	mkdir -p $(DST_DIR)/lib
 	cp -L $(TOOLS_DIR32)/lib/libopenal* $(DST_DIR)/lib/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libopenal.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libopenal.$(LIB_SUFFIX)
 
 
 ##
