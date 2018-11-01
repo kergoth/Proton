@@ -1,10 +1,11 @@
-#include "steamclient_private.h"
 #include "steam_defs.h"
 #include "steamworks_sdk_122/steam_api.h"
+#include "steamclient_private.h"
 #include "cppISteamScreenshots_STEAMSCREENSHOTS_INTERFACE_VERSION001.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "struct_converters_122.h"
 ScreenshotHandle cppISteamScreenshots_STEAMSCREENSHOTS_INTERFACE_VERSION001_WriteScreenshot(void *linux_side, void * pubRGB, uint32 cubRGB, int nWidth, int nHeight)
 {
     return ((ISteamScreenshots*)linux_side)->WriteScreenshot((void *)pubRGB, (uint32)cubRGB, (int)nWidth, (int)nHeight);

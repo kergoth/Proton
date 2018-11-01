@@ -30,7 +30,13 @@ typedef struct __winX winX;
 
 void *create_win_interface(const char *name, void *linux_side);
 unsigned int steamclient_unix_path_to_dos_path(unsigned int api_result, char *inout, unsigned int inout_bytes);
-void *create_LinuxMatchmakingServerListResponse(void *win);
+void *create_LinuxISteamMatchmakingServerListResponse(void *win);
+void *create_LinuxISteamMatchmakingPingResponse(void *win);
+void *create_LinuxISteamMatchmakingPlayersResponse(void *win);
+void *create_LinuxISteamMatchmakingRulesResponse(void *win);
+
+typedef uint64 SteamAPICall_t; //for ancient SDKs
+bool do_cb_wrap(HSteamPipe pipe, void *linux_side, bool (*cpp_func)(void *, SteamAPICall_t, void *, int, int, bool *), SteamAPICall_t call, void *callback, int callback_len, int cb_expected, bool *failed);
 
 #define TRACE WINE_TRACE
 #define ERR WINE_ERR

@@ -45,7 +45,7 @@ uint32 steamclient_unix_path_to_dos_path(uint32 api_result, char *inout, uint32 
         return 0;
     }
 
-    r = WideCharToMultiByte(CP_ACP, 0, converted, -1, inout, inout_bytes,
+    r = WideCharToMultiByte(CP_UNIXCP, 0, converted, -1, inout, inout_bytes,
             NULL, NULL);
 
     HeapFree(GetProcessHeap(), 0, converted);
@@ -89,6 +89,7 @@ static void *(*steamclient_CreateInterface)(const char *name, int *return_code);
 static bool (*steamclient_BGetCallback)(HSteamPipe a, CallbackMsg_t *b, int32 *c);
 static bool (*steamclient_GetAPICallResult)(HSteamPipe, SteamAPICall_t, void *, int, int, bool *);
 static bool (*steamclient_FreeLastCallback)(HSteamPipe);
+static void (*steamclient_ReleaseThreadLocalMemory)(int);
 
 static int load_steamclient(void)
 {
@@ -141,6 +142,12 @@ static int load_steamclient(void)
         return 0;
     }
 
+    steamclient_ReleaseThreadLocalMemory = wine_dlsym(steamclient_lib, "Steam_ReleaseThreadLocalMemory", NULL, 0);
+    if(!steamclient_ReleaseThreadLocalMemory){
+        ERR("unable to load ReleaseThreadLocalMemory method\n");
+        return 0;
+    }
+
     return 1;
 }
 
@@ -156,15 +163,15 @@ void *CDECL CreateInterface(const char *name, int *return_code)
 
 #include "cb_converters.h"
 
-#include <pshpack8.h>
+#pragma pack( push, 8 )
 struct winCallbackMsg_t
 {
     HSteamUser m_hSteamUser;
     int m_iCallback;
     uint8 *m_pubParam;
     int m_cubParam;
-};
-#include <poppack.h>
+}  __attribute__ ((ms_struct));
+#pragma pack( pop )
 
 static void *last_cb = NULL;
 
@@ -181,18 +188,20 @@ bool CDECL Steam_BGetCallback(HSteamPipe pipe, struct winCallbackMsg_t *win_msg,
     ret = steamclient_BGetCallback(pipe, &lin_msg, ignored);
 
     if(ret){
+        BOOL need_free = TRUE;
         win_msg->m_hSteamUser = lin_msg.m_hSteamUser;
         win_msg->m_iCallback = lin_msg.m_iCallback;
         switch(win_msg->m_iCallback | (lin_msg.m_cubParam << 16)){
 #include "cb_converters.dat"
             default:
-                /* drop undocumented callbacks, games can't use them anyway */
-                WARN("Unable to convert callback %u with Linux size %u\n",
-                        lin_msg.m_iCallback, lin_msg.m_cubParam);
-                steamclient_FreeLastCallback(pipe);
-                return 0;
+                /* structs are compatible */
+                need_free = FALSE;
+                win_msg->m_cubParam = lin_msg.m_cubParam;
+                win_msg->m_pubParam = lin_msg.m_pubParam;
+                break;
         }
-        last_cb = win_msg->m_pubParam;
+        if(need_free)
+            last_cb = win_msg->m_pubParam;
     }
 
     return ret;
@@ -203,40 +212,54 @@ static int get_callback_len(int cb)
     switch(cb){
 #include "cb_getapi_sizes.dat"
     }
-    WARN("Unrecognized expected callback: %u\n", cb);
     return 0;
+}
+
+bool do_cb_wrap(HSteamPipe pipe, void *linux_side,
+        bool (*cpp_func)(void *, SteamAPICall_t, void *, int, int, bool *),
+        SteamAPICall_t call, void *callback, int callback_len, int cb_expected, bool *failed)
+{
+    void *lin_callback = NULL;
+    int lin_callback_len;
+    bool ret;
+
+    lin_callback_len = get_callback_len(cb_expected);
+    if(!lin_callback_len){
+        /* structs are compatible, pass on through */
+        if(!cpp_func){
+            if(!load_steamclient())
+                return 0;
+            return steamclient_GetAPICallResult(pipe, call, callback, callback_len, cb_expected, failed);
+        }
+        return cpp_func(linux_side, call, callback, callback_len, cb_expected, failed);
+    }
+
+    /* structs require conversion */
+    lin_callback = HeapAlloc(GetProcessHeap(), 0, lin_callback_len);
+
+    if(!cpp_func){
+        if(!load_steamclient())
+            return 0;
+        ret = steamclient_GetAPICallResult(pipe, call, lin_callback, lin_callback_len, cb_expected, failed);
+    }else
+        ret = cpp_func(linux_side, call, lin_callback, lin_callback_len, cb_expected, failed);
+
+    if(ret){
+        switch(cb_expected){
+#include "cb_getapi_table.dat"
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, lin_callback);
+
+    return ret;
 }
 
 bool CDECL Steam_GetAPICallResult(HSteamPipe pipe, SteamAPICall_t call,
         void *callback, int callback_len, int cb_expected, bool *failed)
 {
-    void *lin_callback;
-    int lin_callback_len;
-    bool ret;
-
     TRACE("%u, x, %p, %u, %u, %p\n", pipe, callback, callback_len, cb_expected, failed);
-
-    if(!load_steamclient())
-        return 0;
-
-    lin_callback_len = get_callback_len(cb_expected);
-    if(!lin_callback_len)
-        lin_callback_len = callback_len;
-    lin_callback = HeapAlloc(GetProcessHeap(), 0, lin_callback_len);
-
-    ret = steamclient_GetAPICallResult(pipe, call, lin_callback, lin_callback_len, cb_expected, failed);
-
-    if(ret){
-        switch(cb_expected){
-#include "cb_getapi_table.dat"
-        default:
-            WARN("Unknown callback\n");
-            memcpy(callback, lin_callback, lin_callback_len);
-            break;
-        }
-    }
-
-    return ret;
+    return do_cb_wrap(pipe, NULL, NULL, call, callback, callback_len, cb_expected, failed);
 }
 
 bool CDECL Steam_FreeLastCallback(HSteamPipe pipe)
@@ -250,6 +273,16 @@ bool CDECL Steam_FreeLastCallback(HSteamPipe pipe)
     last_cb = NULL;
 
     return steamclient_FreeLastCallback(pipe);
+}
+
+void CDECL Steam_ReleaseThreadLocalMemory(int bThreadExit)
+{
+    TRACE("%d\n", bThreadExit);
+
+    if(!load_steamclient())
+        return;
+
+    steamclient_ReleaseThreadLocalMemory(bThreadExit);
 }
 
 void CDECL Breakpad_SteamMiniDumpInit(uint32_t a, const char *b, const char *c)

@@ -48,6 +48,10 @@ endif
 export CC
 export CXX
 
+cc-option = $(shell if test -z "`echo 'void*p=1;' | \
+              $(1) $(2) -S -o /dev/null -xc - 2>&1 | grep -- $(2) -`"; \
+              then echo "$(2)"; else echo "$(3)"; fi ;)
+
 # Selected container mode shell
 DOCKER_SHELL_BASE = docker run --rm --init -v $(HOME):$(HOME) -w $(CURDIR) -e HOME=$(HOME) \
                                     -v /etc/passwd:/etc/passwd:ro -u $(shell id -u):$(shell id -g) -h $(shell hostname) \
@@ -146,7 +150,9 @@ JPEG64_LIBS :=
 WINE32_AUTOCONF :=
 WINE64_AUTOCONF :=
 
-OPTIMIZE_FLAGS := -O2 -mmmx -msse -msse2 -mfpmath=sse
+OPTIMIZE_FLAGS := -O2 -march=nocona $(call cc-option,$(CC),-mtune=core-avx2,) -mfpmath=sse
+SANITY_FLAGS   := -fwrapv -fno-strict-aliasing
+COMMON_FLAGS   := $(OPTIMIZE_FLAGS) $(SANITY_FLAGS)
 
 # Use $(call QUOTE,$(VAR)) to flatten a list to a single element (for feeding to a shell)
 
@@ -243,6 +249,8 @@ FFMPEG_CROSS_CFLAGS :=
 FFMPEG_CROSS_LDFLAGS :=
 
 LSTEAMCLIENT := $(SRCDIR)/lsteamclient
+LSTEAMCLIENT32 := ./syn-lsteamclient32/lsteamclient
+LSTEAMCLIENT64 := ./syn-lsteamclient64/lsteamclient
 LSTEAMCLIENT_OBJ32 := ./obj-lsteamclient32
 LSTEAMCLIENT_OBJ64 := ./obj-lsteamclient64
 
@@ -305,6 +313,9 @@ MOLTENVKPROTON := ./syn-MoltenVK
 MOLTENVK_OBJ := ./obj-moltenvk
 MOLTENVK_OUT := $(TOOLS_DIR64)/lib/libMoltenVK.dylib
 
+FONTS := $(SRCDIR)/fonts
+FONTS_OBJ := ./obj-fonts
+
 ## Object directories
 OBJ_DIRS := $(TOOLS_DIR32)        $(TOOLS_DIR64)        \
             $(FREETYPE_OBJ32)     $(FREETYPE_OBJ64)     \
@@ -343,9 +354,11 @@ DIST_LICENSE := $(DST_BASE)/LICENSE
 DIST_GECKO_DIR := $(DST_DIR)/share/wine/gecko
 DIST_GECKO32 := $(DIST_GECKO_DIR)/$(GECKO32_MSI)
 DIST_GECKO64 := $(DIST_GECKO_DIR)/$(GECKO64_MSI)
+DIST_FONTS := $(DST_DIR)/share/fonts
 
 DIST_TARGETS := $(DIST_COPY_TARGETS) $(DIST_VERSION) $(DIST_OVR32) $(DIST_OVR64) \
-                $(DIST_GECKO32) $(DIST_GECKO64) $(DIST_COMPAT_MANIFEST) $(DIST_LICENSE)
+                $(DIST_GECKO32) $(DIST_GECKO64) $(DIST_COMPAT_MANIFEST) $(DIST_LICENSE) \
+                $(DIST_FONTS)
 
 DEPLOY_COPY_TARGETS := $(DIST_COPY_TARGETS) $(DIST_VERSION) $(DIST_LICENSE)
 
@@ -397,6 +410,10 @@ $(DIST_GECKO32): | $(DIST_GECKO_DIR)
 		cp "$(SRCDIR)/contrib/$(GECKO32_MSI)" "$@"; \
 	fi
 
+$(DIST_FONTS): fonts
+	mkdir -p $@
+	cp $(FONTS_OBJ)/*.ttf "$@"
+
 .PHONY: dist
 
 ALL_TARGETS += dist
@@ -406,14 +423,22 @@ GOAL_TARGETS += dist
 # the explicit targets, specify that this should occur after.
 dist: $(DIST_TARGETS) | $(WINE_OUT) $(filter $(MAKECMDGOALS),wine64 wine32 wine) $(DST_DIR)
 	WINEPREFIX=$(abspath $(DIST_PREFIX)) $(WINE_OUT_BIN) wineboot && \
-		WINEPREFIX=$(abspath $(DIST_PREFIX)) $(WINE_OUT_SERVER) -w
+		WINEPREFIX=$(abspath $(DIST_PREFIX)) $(WINE_OUT_SERVER) -w && \
+		ln -s $(FONTLINKPATH)/LiberationSans-Regular.ttf $(abspath $(DIST_PREFIX))/drive_c/windows/Fonts/arial.ttf && \
+		ln -s $(FONTLINKPATH)/LiberationSans-Bold.ttf $(abspath $(DIST_PREFIX))/drive_c/windows/Fonts/arialbd.ttf && \
+		ln -s $(FONTLINKPATH)/LiberationSerif-Regular.ttf $(abspath $(DIST_PREFIX))/drive_c/windows/Fonts/times.ttf && \
+		ln -s $(FONTLINKPATH)/LiberationMono-Regular.ttf $(abspath $(DIST_PREFIX))/drive_c/windows/Fonts/cour.ttf
+#The use of "arial" here is for compatibility with programs that require that exact string. These links do not point to Arial.
+#The use of "times" here is for compatibility with programs that require that exact string. This link does not point to Times New Roman.
+#The use of "cour" here is for compatibility with programs that require that exact string. This link does not point to Courier New.
 
-deploy: dist
+deploy: dist | $(filter-out dist deploy install,$(MAKECMDGOALS))
 	mkdir -p $(DEPLOY_DIR) && \
 	cp -a $(DEPLOY_COPY_TARGETS) $(DEPLOY_DIR) && \
 	tar -C $(DST_DIR) -c . | gzip -c -1 > $(DEPLOY_DIR)/proton_dist.tar.gz
+	@echo "Created deployment tarball at "$(DEPLOY_DIR)"/proton_dist.tar.gz"
 
-install: dist
+install: dist | $(filter-out dist deploy install,$(MAKECMDGOALS))
 	if [ ! -d $(STEAM_DIR) ]; then echo >&2 "!! "$(STEAM_DIR)" does not exist, cannot install"; return 1; fi
 	mkdir -p $(STEAM_DIR)/compatibilitytools.d/$(BUILD_NAME)
 	cp -a $(DST_BASE)/* $(STEAM_DIR)/compatibilitytools.d/$(BUILD_NAME)
@@ -929,12 +954,14 @@ ffmpeg64: SHELL = $(CONTAINER_SHELL64)
 ffmpeg64: $(FFMPEG_CONFIGURE_FILES64)
 	+$(MAKE) -C $(FFMPEG_OBJ64)
 	+$(MAKE) -C $(FFMPEG_OBJ64) install
+	mkdir -pv $(DST_DIR)/lib64
 	cp -L $(TOOLS_DIR64)/lib/{libavcodec,libavutil}* $(DST_DIR)/lib64
 
 ffmpeg32: SHELL = $(CONTAINER_SHELL32)
 ffmpeg32: $(FFMPEG_CONFIGURE_FILES32)
 	+$(MAKE) -C $(FFMPEG_OBJ32)
 	+$(MAKE) -C $(FFMPEG_OBJ32) install
+	mkdir -pv $(DST_DIR)/lib
 	cp -L $(TOOLS_DIR32)/lib/{libavcodec,libavutil}* $(DST_DIR)/lib
 
 endif # ifeq ($(WITH_FFMPEG),1)
@@ -943,6 +970,23 @@ endif # ifeq ($(WITH_FFMPEG),1)
 ## lsteamclient
 ##
 
+# The source directory for lsteamclient is a synthetic symlink clone of the source directory, because we need to run
+# winemaker in tree and it can stomp itself in parallel builds.
+$(LSTEAMCLIENT64)/.created: $(LSTEAMCLIENT) $(MAKEFILE_DEP)
+	rm -rf ./$(LSTEAMCLIENT64)
+	mkdir -p $(LSTEAMCLIENT64)/
+	cd $(LSTEAMCLIENT64)/ && ln -sfv ../../$(LSTEAMCLIENT)/* .
+	touch $@
+
+$(LSTEAMCLIENT32)/.created: $(LSTEAMCLIENT) $(MAKEFILE_DEP)
+	rm -rf ./$(LSTEAMCLIENT32)
+	mkdir -p $(LSTEAMCLIENT32)/
+	cd $(LSTEAMCLIENT32)/ && ln -sfv ../../$(LSTEAMCLIENT)/* .
+	touch $@
+
+$(LSTEAMCLIENT64): $(LSTEAMCLIENT64)/.created
+$(LSTEAMCLIENT32): $(LSTEAMCLIENT32)/.created
+
 ## Create & configure object directory for lsteamclient
 
 LSTEAMCLIENT_CONFIGURE_FILES32 := $(LSTEAMCLIENT_OBJ32)/Makefile
@@ -950,35 +994,37 @@ LSTEAMCLIENT_CONFIGURE_FILES64 := $(LSTEAMCLIENT_OBJ64)/Makefile
 
 # 64bit-configure
 $(LSTEAMCLIENT_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
-$(LSTEAMCLIENT_CONFIGURE_FILES64): $(LSTEAMCLIENT) $(MAKEFILE_DEP) | $(LSTEAMCLIENT_OBJ64) $(WINEMAKER)
+$(LSTEAMCLIENT_CONFIGURE_FILES64): $(LSTEAMCLIENT64) $(MAKEFILE_DEP) | $(LSTEAMCLIENT_OBJ64) $(WINEMAKER)
 	cd $(dir $@) && \
 		$(WINEMAKER) --nosource-fix --nolower-include --nodlls --nomsvcrt \
 			-DSTEAM_API_EXPORTS \
+			-Dprivate=public -Dprotected=public \
 			-I"../$(TOOLS_DIR64)"/include/ \
 			-I"../$(TOOLS_DIR64)"/include/wine/ \
 			-I"../$(TOOLS_DIR64)"/include/wine/windows/ \
 			-L"../$(TOOLS_DIR64)"/lib64/ \
 			-L"../$(TOOLS_DIR64)"/lib64/wine/ \
-			--dll ../$(LSTEAMCLIENT) && \
-		cp ../$(LSTEAMCLIENT)/Makefile . && \
-		echo >> ./Makefile 'SRCDIR := ../$(LSTEAMCLIENT)' && \
+			--dll ../$(LSTEAMCLIENT64) && \
+		cp ../$(LSTEAMCLIENT64)/Makefile . && \
+		echo >> ./Makefile 'SRCDIR := ../$(LSTEAMCLIENT64)' && \
 		echo >> ./Makefile 'vpath % $$(SRCDIR)' && \
 		echo >> ./Makefile 'lsteamclient_dll_LDFLAGS := $$(patsubst %.spec,$$(SRCDIR)/%.spec,$$(lsteamclient_dll_LDFLAGS))'
 
 # 32-bit configure
 $(LSTEAMCLIENT_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
-$(LSTEAMCLIENT_CONFIGURE_FILES32): $(LSTEAMCLIENT) $(MAKEFILE_DEP) | $(LSTEAMCLIENT_OBJ32) $(WINEMAKER)
+$(LSTEAMCLIENT_CONFIGURE_FILES32): $(LSTEAMCLIENT32) $(MAKEFILE_DEP) | $(LSTEAMCLIENT_OBJ32) $(WINEMAKER)
 	cd $(dir $@) && \
 		$(WINEMAKER) --nosource-fix --nolower-include --nodlls --nomsvcrt --wine32 \
 			-DSTEAM_API_EXPORTS \
+			-Dprivate=public -Dprotected=public \
 			-I"../$(TOOLS_DIR32)"/include/ \
 			-I"../$(TOOLS_DIR32)"/include/wine/ \
 			-I"../$(TOOLS_DIR32)"/include/wine/windows/ \
 			-L"../$(TOOLS_DIR32)"/lib/ \
 			-L"../$(TOOLS_DIR32)"/lib/wine/ \
-			--dll ../$(LSTEAMCLIENT) && \
-		cp ../$(LSTEAMCLIENT)/Makefile . && \
-		echo >> ./Makefile 'SRCDIR := ../$(LSTEAMCLIENT)' && \
+			--dll ../$(LSTEAMCLIENT32) && \
+		cp ../$(LSTEAMCLIENT32)/Makefile . && \
+		echo >> ./Makefile 'SRCDIR := ../$(LSTEAMCLIENT32)' && \
 		echo >> ./Makefile 'vpath % $$(SRCDIR)' && \
 		echo >> ./Makefile 'lsteamclient_dll_LDFLAGS := -m32 $$(patsubst %.spec,$$(SRCDIR)/%.spec,$$(lsteamclient_dll_LDFLAGS))'
 
@@ -1000,16 +1046,18 @@ lsteamclient: lsteamclient32 lsteamclient64
 
 lsteamclient64: SHELL = $(CONTAINER_SHELL64)
 lsteamclient64: $(LSTEAMCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" LDFLAGS="$(LDFLAGS)" CXXFLAGS="-Wno-attributes $(OPTIMIZE_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(OPTIMIZE_FLAGS) -g $(CFLAGS)" \
+	+env PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" LDFLAGS="$(LDFLAGS)" CXXFLAGS="-Wno-attributes $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" \
 		$(MAKE) -C $(LSTEAMCLIENT_OBJ64)
 	[ x"$(STRIP)" = x ] || $(STRIP) $(LSTEAMCLIENT_OBJ64)/lsteamclient.dll.so
+	mkdir -pv $(DST_DIR)/lib64/wine/
 	cp -a $(LSTEAMCLIENT_OBJ64)/lsteamclient.dll.so $(DST_DIR)/lib64/wine/
 
 lsteamclient32: SHELL = $(CONTAINER_SHELL32)
 lsteamclient32: $(LSTEAMCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes $(OPTIMIZE_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(OPTIMIZE_FLAGS) -g $(CFLAGS)" \
+	+env PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(COMMON_FLAGS) -g $(CFLAGS)" \
 		$(MAKE) -C $(LSTEAMCLIENT_OBJ32)
 	[ x"$(STRIP)" = x ] || $(STRIP) $(LSTEAMCLIENT_OBJ32)/lsteamclient.dll.so
+	mkdir -pv $(DST_DIR)/lib/wine/
 	cp -a $(LSTEAMCLIENT_OBJ32)/lsteamclient.dll.so $(DST_DIR)/lib/wine/
 
 ##
@@ -1050,7 +1098,7 @@ $(WINE_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
 $(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WINE_OBJ64) $(WINE_ORDER_DEPS64)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -g $(OPTIMIZE_FLAGS) $(CFLAGS)" \
+		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -g $(COMMON_FLAGS) $(CFLAGS)" \
 		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib $(LDFLAGS)"\
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR64))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
@@ -1071,7 +1119,7 @@ $(WINE_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
 $(WINE_CONFIGURE_FILES32): $(MAKEFILE_DEP) | $(WINE_OBJ32) $(WINE_ORDER_DEPS32)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -g $(OPTIMIZE_FLAGS) $(CFLAGS)" \
+		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -g $(COMMON_FLAGS) $(CFLAGS)" \
 		LDFLAGS="-L$(abspath $(TOOLS_DIR32))/lib $(LDFLAGS)" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR32))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
@@ -1214,23 +1262,25 @@ vrclient: vrclient32 vrclient64
 
 vrclient64: SHELL = $(CONTAINER_SHELL64)
 vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env LDFLAGS="$(LDFLAGS)" CCXXFLAGS="-Wno-attributes -std=c++0x $(OPTIMIZE_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(OPTIMIZE_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
+	+env LDFLAGS="$(LDFLAGS)" CCXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ64)
 	cd $(VRCLIENT_OBJ64) && \
 		PATH=$(abspath $(TOOLS_DIR64))/bin:$(PATH) \
 			winebuild --dll --fake-module -E ../$(VRCLIENT)/vrclient_x64/vrclient_x64.spec -o vrclient_x64.dll.fake && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(VRCLIENT_OBJ64)/vrclient_x64.dll.so && \
+		mkdir -pv ../$(DST_DIR)/lib64/wine/fakedlls && \
 		cp -a ../$(VRCLIENT_OBJ64)/vrclient_x64.dll.so ../$(DST_DIR)/lib64/wine/ && \
 		cp -a ../$(VRCLIENT_OBJ64)/vrclient_x64.dll.fake ../$(DST_DIR)/lib64/wine/fakedlls/vrclient_x64.dll
 
 vrclient32: SHELL = $(CONTAINER_SHELL32)
 vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(OPTIMIZE_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(OPTIMIZE_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
+	+env LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ32)
 	cd $(VRCLIENT_OBJ32) && \
 		PATH=$(abspath $(TOOLS_DIR32))/bin:$(PATH) \
 			winebuild --dll --fake-module -E ../$(VRCLIENT32)/vrclient/vrclient.spec -o vrclient.dll.fake && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(VRCLIENT_OBJ32)/vrclient.dll.so && \
+		mkdir -pv ../$(DST_DIR)/lib/wine/fakedlls && \
 		cp -a ../$(VRCLIENT_OBJ32)/vrclient.dll.so ../$(DST_DIR)/lib/wine/ && \
 		cp -a ../$(VRCLIENT_OBJ32)/vrclient.dll.fake ../$(DST_DIR)/lib/wine/fakedlls/vrclient.dll
 
@@ -1306,17 +1356,23 @@ ifneq ($(NO_DXVK),1) # May be disabled by configure
 DXVK_CONFIGURE_FILES32 := $(DXVK_OBJ32)/build.ninja
 DXVK_CONFIGURE_FILES64 := $(DXVK_OBJ64)/build.ninja
 
-# 64bit-configure
-$(DXVK_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(DXVK_OBJ64)
-	cd "$(DXVK)" && \
-		PATH="$(abspath $(SRCDIR))/glslang/bin/:$(PATH)" \
-			meson --prefix="$(abspath $(DXVK_OBJ64))" --cross-file build-win64.txt --strip --buildtype=release "$(abspath $(DXVK_OBJ64))"
+# 64bit-configure.  Remove coredata file if already configured (due to e.g. makefile changing)
+$(DXVK_CONFIGURE_FILES64): $(MAKEFILE_DEP) $(DXVK)/build-win64.txt | $(DXVK_OBJ64)
+	if [ -e "$(abspath $(DXVK_OBJ64))"/build.ninja ]; then \
+		rm -f "$(abspath $(DXVK_OBJ64))"/meson-private/coredata.dat; \
+	fi
+	cd "$(abspath $(DXVK))" && \
+	PATH="$(abspath $(SRCDIR))/glslang/bin/:$(PATH)" \
+		meson --prefix="$(abspath $(DXVK_OBJ64))" --cross-file build-win64.txt --strip --buildtype=release "$(abspath $(DXVK_OBJ64))"
 
-# 32-bit configure
-$(DXVK_CONFIGURE_FILES32): $(MAKEFILE_DEP) | $(DXVK_OBJ32)
-	cd "$(DXVK)" && \
-		PATH="$(abspath $(SRCDIR))/glslang/bin/:$(PATH)" \
-			meson --prefix="$(abspath $(DXVK_OBJ32))" --cross-file build-win32.txt --strip --buildtype=release "$(abspath $(DXVK_OBJ32))"
+# 32-bit configure.  Remove coredata file if already configured (due to e.g. makefile changing)
+$(DXVK_CONFIGURE_FILES32): $(MAKEFILE_DEP) $(DXVK)/build-win32.txt | $(DXVK_OBJ32)
+	if [ -e "$(abspath $(DXVK_OBJ32))"/build.ninja ]; then \
+		rm -f "$(abspath $(DXVK_OBJ32))"/meson-private/coredata.dat; \
+	fi
+	cd "$(abspath $(DXVK))" && \
+	PATH="$(abspath $(SRCDIR))/glslang/bin/:$(PATH)" \
+		meson --prefix="$(abspath $(DXVK_OBJ32))" --cross-file build-win32.txt --strip --buildtype=release "$(abspath $(DXVK_OBJ32))"
 
 ## dxvk goals
 DXVK_TARGETS = dxvk dxvk_configure dxvk32 dxvk64 dxvk_configure32 dxvk_configure64
@@ -1361,6 +1417,57 @@ endif # NO_DXVK
 #  build_vrclient64_tests
 #  build_vrclient32_tests
 
+ALL_TARGETS += fonts
+GOAL_TARGETS += fonts
+
+.PHONY: fonts
+
+FONTFORGE = fontforge -quiet
+FONTSCRIPT = $(FONTS)/scripts/generatefont.pe
+FONTLINKPATH = ../../../../fonts
+
+LIBERATION_SRCDIR = $(FONTS)/liberation-fonts/src
+
+LIBERATION_SANS_REGULAR_SFD = LiberationSans-Regular.sfd
+LIBERATION_SANS_BOLD_SFD = LiberationSans-Bold.sfd
+LIBERATION_SERIF_REGULAR_SFD = LiberationSerif-Regular.sfd
+LIBERATION_MONO_REGULAR_SFD = LiberationMono-Regular.sfd
+
+LIBERATION_SANS_REGULAR_TTF = $(addprefix $(FONTS_OBJ)/, $(LIBERATION_SANS_REGULAR_SFD:.sfd=.ttf))
+LIBERATION_SANS_BOLD_TTF = $(addprefix $(FONTS_OBJ)/, $(LIBERATION_SANS_BOLD_SFD:.sfd=.ttf))
+LIBERATION_SERIF_REGULAR_TTF = $(addprefix $(FONTS_OBJ)/, $(LIBERATION_SERIF_REGULAR_SFD:.sfd=.ttf))
+LIBERATION_MONO_REGULAR_TTF = $(addprefix $(FONTS_OBJ)/, $(LIBERATION_MONO_REGULAR_SFD:.sfd=.ttf))
+
+LIBERATION_SFDS = $(LIBERATION_SANS_REGULAR_SFD) $(LIBERATION_SANS_BOLD_SFD) $(LIBERATION_SERIF_REGULAR_SFD) $(LIBERATION_MONO_REGULAR_SFD)
+FONT_TTFS = $(LIBERATION_SANS_REGULAR_TTF) $(LIBERATION_SANS_BOLD_TTF) \
+            $(LIBERATION_SERIF_REGULAR_TTF) $(LIBERATION_MONO_REGULAR_TTF)
+FONTS_SRC = $(FONT_TTFS:.ttf=.sfd)
+
+#The use of "Arial" here is for compatibility with programs that require that exact string. This font is not Arial.
+$(LIBERATION_SANS_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "Arial" "Arial" "Arial"
+
+#The use of "Arial" here is for compatibility with programs that require that exact string. This font is not Arial.
+$(LIBERATION_SANS_BOLD_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "Arial-Bold" "Arial" "Arial Bold"
+
+#The use of "Times New Roman" here is for compatibility with programs that require that exact string. This font is not Times New Roman.
+$(LIBERATION_SERIF_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "TimesNewRoman" "Times New Roman" "Times New Roman"
+
+#The use of "Courier New" here is for compatibility with programs that require that exact string. This font is not Courier New.
+$(LIBERATION_MONO_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+	patch $(@:.ttf=.sfd) $(FONTS)/patches/$(LIBERATION_MONO_REGULAR_SFD:.sfd=.patch)
+	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "CourierNew" "Courier New" "Courier New"
+
+$(FONTS_OBJ):
+	mkdir -p $@
+
+$(FONTS_SRC): $(FONTS_OBJ)
+	cp -n $(addprefix $(LIBERATION_SRCDIR)/, $(LIBERATION_SFDS)) $<
+
+fonts: $(LIBERATION_SANS_REGULAR_TTF) $(LIBERATION_SANS_BOLD_TTF) \
+       $(LIBERATION_SERIF_REGULAR_TTF) $(LIBERATION_MONO_REGULAR_TTF) | $(FONTS_SRC)
 
 ##
 ## Targets
