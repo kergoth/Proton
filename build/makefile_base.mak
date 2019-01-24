@@ -817,7 +817,6 @@ $(FFMPEG_CONFIGURE_FILES64): $(FFMPEG)/configure $(MAKEFILE_DEP) | $(FFMPEG_OBJ6
 			--disable-doc \
 			--disable-avdevice \
 			--disable-avformat \
-			--disable-swresample \
 			--disable-swscale \
 			--disable-postproc \
 			--disable-avfilter \
@@ -853,7 +852,6 @@ $(FFMPEG_CONFIGURE_FILES32): $(FFMPEG)/configure $(MAKEFILE_DEP) | $(FFMPEG_OBJ3
 			--disable-doc \
 			--disable-avdevice \
 			--disable-avformat \
-			--disable-swresample \
 			--disable-swscale \
 			--disable-postproc \
 			--disable-avfilter \
