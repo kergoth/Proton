@@ -243,8 +243,8 @@ GECKO64_MSI := wine_gecko-$(GECKO_VER)-x86_64.msi
 FFMPEG := $(SRCDIR)/ffmpeg
 FFMPEG_OBJ32 := ./obj-ffmpeg32
 FFMPEG_OBJ64 := ./obj-ffmpeg64
-FFMPEG_CROSS_CFLAGS :=
-FFMPEG_CROSS_LDFLAGS :=
+FFMPEG_CROSS_CFLAGS = -m32 -g -O2 $(CFLAGS)
+FFMPEG_CROSS_LDFLAGS = -m32 $(LDFLAGS)
 
 FAUDIO := $(SRCDIR)/FAudio
 FAUDIO_OBJ32 := ./obj-faudio32
@@ -845,7 +845,7 @@ $(FFMPEG_CONFIGURE_FILES32): $(FFMPEG)/configure $(MAKEFILE_DEP) | $(FFMPEG_OBJ3
 		$(abspath $(FFMPEG))/configure \
 			--cc=$(CC_QUOTED) --cxx=$(CXX_QUOTED) \
 			--prefix=$(abspath $(TOOLS_DIR32)) \
-			--extra-cflags=$(FFMPEG_CROSS_CFLAGS) --extra-ldflags=$(FFMPEG_CROSS_LDFLAGS) \
+			--extra-cflags="$(FFMPEG_CROSS_CFLAGS)" --extra-ldflags="$(FFMPEG_CROSS_LDFLAGS)" \
 			--disable-static \
 			--enable-shared \
 			--disable-programs \
