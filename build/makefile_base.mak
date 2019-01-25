@@ -27,6 +27,7 @@ else # (Rest of the file is the else)
 #   BUILD_NAME      - Name of the build for manifests etc.
 #   NO_DXVK         - 1 if skipping DXVK steps
 #   WITH_FFMPEG     - 1 if including ffmpeg steps
+#   OSX             - 1 if OS X build
 #   STEAMRT64_MODE  - 'docker' or '' for automatic Steam Runtime container
 #   STEAMRT64_IMAGE - Name of the image if mode is set
 #   STEAMRT32_MODE  - Same as above for 32-bit container (can be different type)
@@ -134,7 +135,20 @@ ALL_TARGETS =
 ## Platform-specific variables
 ##
 
+LIB_SUFFIX := "so"
 STRIP := strip
+FREETYPE32_CFLAGS :=
+FREETYPE32_LIBS :=
+FREETYPE64_CFLAGS :=
+FREETYPE64_LIBS :=
+PNG32_CFLAGS :=
+PNG32_LIBS :=
+PNG64_CFLAGS :=
+PNG64_LIBS :=
+JPEG32_CFLAGS :=
+JPEG32_LIBS :=
+JPEG64_CFLAGS :=
+JPEG64_LIBS :=
 WINE32_AUTOCONF :=
 WINE64_AUTOCONF :=
 
@@ -144,10 +158,59 @@ COMMON_FLAGS   := $(OPTIMIZE_FLAGS) $(SANITY_FLAGS)
 
 # Use $(call QUOTE,$(VAR)) to flatten a list to a single element (for feeding to a shell)
 
+# OS X specific
+ifeq ($(OSX),1)
+NO_DXVK = 1
+STRIP := strip -x
+LIB_SUFFIX := dylib
+WINE32_AUTOCONF := --without-x \
+                   ac_cv_lib_soname_freetype=libprotonfreetype.dylib \
+                   ac_cv_lib_soname_png=libprotonpng16.dylib \
+                   ac_cv_lib_soname_jpeg=libprotonjpeg.dylib
+WINE64_AUTOCONF := --without-x \
+                   ac_cv_lib_soname_freetype=libprotonfreetype.dylib \
+                   ac_cv_lib_soname_png=libprotonpng16.dylib \
+                   ac_cv_lib_soname_jpeg=libprotonjpeg.dylib
+
+FREETYPE32_CFLAGS := -I$(abspath $(TOOLS_DIR32))/include/freetype2
+FREETYPE32_LIBS   := -L$(abspath $(TOOLS_DIR32))/lib -lprotonfreetype -framework CoreServices -framework ApplicationServices -lz
+FREETYPE64_CFLAGS := -I$(abspath $(TOOLS_DIR64))/include/freetype2
+FREETYPE64_LIBS   := -L$(abspath $(TOOLS_DIR64))/lib -lprotonfreetype
+PNG32_CFLAGS      := -I$(abspath $(TOOLS_DIR32))/include
+PNG32_LIBS        := -L$(abspath $(TOOLS_DIR32))/lib -lprotonpng
+PNG64_CFLAGS      := -I$(abspath $(TOOLS_DIR64))/include
+PNG64_LIBS        := -L$(abspath $(TOOLS_DIR64))/lib -lprotonpng
+JPEG32_CFLAGS     := -I$(abspath $(TOOLS_DIR32))/include
+JPEG32_LIBS       := -L$(abspath $(TOOLS_DIR32))/lib -lprotonjpeg
+JPEG64_CFLAGS     := -I$(abspath $(TOOLS_DIR64))/include
+JPEG64_LIBS       := -L$(abspath $(TOOLS_DIR64))/lib -lprotonjpeg
+
+export XML2_CFLAGS := $(xml2-config --cflags)
+export XML2_LIBS := $(xml2-config --libs)
+endif
+
+# Make magic: We don't want the variables listed here to be lists, just single elements with spaces in them for passing
+# to shells. But we don't want someone forgetting to type "\ " to cause bizarre bugs.  Just let them be entered
+# free-form above, then enforce flattening on them all.
+QUOTED_VARIABLES := LIB_SUFFIX \
+                    FREETYPE32_CFLAGS \
+                    FREETYPE32_LIBS \
+                    FREETYPE64_CFLAGS \
+                    FREETYPE64_LIBS \
+                    PNG32_CFLAGS \
+                    PNG32_LIBS \
+                    PNG64_CFLAGS \
+                    PNG64_LIBS \
+                    JPEG32_CFLAGS \
+                    JPEG32_LIBS \
+                    JPEG64_CFLAGS \
+                    JPEG64_LIBS
+
 # v-- This flattens a list when called. Don't look directly into it.
 QUOTE = $(subst $(eval) ,\ ,$(1))
 QUOTE_VARIABLE = $(eval $(1) := $$(call QUOTE,$$($(1))))
 QUOTE_VARIABLE_LIST = $(foreach a,$(1),$(call QUOTE_VARIABLE,$(a)))
+$(call QUOTE_VARIABLE_LIST,$(QUOTED_VARIABLES))
 
 # These variables might need to be quoted, but might not
 #
@@ -162,7 +225,16 @@ CXX_QUOTED   = $(call QUOTE,$(CXX))
 ##
 
 COMPAT_MANIFEST_TEMPLATE := $(SRCDIR)/compatibilitytool.vdf.template
-LICENSE := $(SRCDIR)/dist.LICENSE
+LICENSE := $(SRCDIR)/dist.LICENSE.lin
+ifeq ($(OSX),1)
+	LICENSE := $(SRCDIR)/dist.LICENSE.osx
+endif
+
+FREETYPE := $(SRCDIR)/freetype2
+FREETYPE_OBJ32 := ./obj-freetype32
+FREETYPE_OBJ64 := ./obj-freetype64
+FREETYPE_OUT64 := $(TOOLS_DIR64)/lib/libprotonfreetype.dylib
+FREETYPE_OUT32 := $(TOOLS_DIR32)/lib/libprotonfreetype.dylib
 
 GECKO_VER := 2.47
 GECKO32_MSI := wine_gecko-$(GECKO_VER)-x86.msi
@@ -217,18 +289,49 @@ CMAKE_OBJ64 := ./obj-cmake64
 CMAKE_BIN32 := $(CMAKE_OBJ32)/built/bin/cmake
 CMAKE_BIN64 := $(CMAKE_OBJ64)/built/bin/cmake
 
+LIBPNG := $(SRCDIR)/libpng
+LIBPNGPROTON := ./syn-libpng
+LIBPNG_OBJ32 := ./obj-libpng32
+LIBPNG_OBJ64 := ./obj-libpng64
+LIBPNG_OUT64 := $(TOOLS_DIR64)/lib/libprotonpng16.dylib
+LIBPNG_OUT32 := $(TOOLS_DIR32)/lib/libprotonpng16.dylib
+
+LIBJPEG := $(SRCDIR)/libjpeg-turbo
+LIBJPEGPROTON := ./syn-libjpeg
+LIBJPEG_OBJ32 := ./obj-libjpeg32
+LIBJPEG_OBJ64 := ./obj-libjpeg64
+LIBJPEG_OUT64 := $(TOOLS_DIR64)/lib/libprotonjpeg.dylib
+LIBJPEG_OUT32 := $(TOOLS_DIR32)/lib/libprotonjpeg.dylib
+
+LIBSDL := $(SRCDIR)/SDL-mirror
+LIBSDLPROTON := ./syn-libsdl
+LIBSDL_OBJ32 := ./obj-libsdl32
+LIBSDL_OBJ64 := ./obj-libsdl64
+LIBSDL_OUT64 := $(TOOLS_DIR64)/lib/libSDL2.dylib
+LIBSDL_OUT32 := $(TOOLS_DIR32)/lib/libSDL2.dylib
+
+MOLTENVK := $(SRCDIR)/MoltenVK
+MOLTENVKPROTON := ./syn-MoltenVK
+MOLTENVK_OBJ := ./obj-moltenvk
+MOLTENVK_OUT := $(TOOLS_DIR64)/lib/libMoltenVK.dylib
+
 FONTS := $(SRCDIR)/fonts
 FONTS_OBJ := ./obj-fonts
 
 ## Object directories
 OBJ_DIRS := $(TOOLS_DIR32)        $(TOOLS_DIR64)        \
+            $(FREETYPE_OBJ32)     $(FREETYPE_OBJ64)     \
             $(FFMPEG_OBJ32)       $(FFMPEG_OBJ64)       \
             $(FAUDIO_OBJ32)       $(FAUDIO_OBJ64)       \
             $(LSTEAMCLIENT_OBJ32) $(LSTEAMCLIENT_OBJ64) \
             $(WINE_OBJ32)         $(WINE_OBJ64)         \
             $(VRCLIENT_OBJ32)     $(VRCLIENT_OBJ64)     \
             $(DXVK_OBJ32)         $(DXVK_OBJ64)         \
-            $(CMAKE_OBJ32)        $(CMAKE_OBJ64)
+            $(CMAKE_OBJ32)        $(CMAKE_OBJ64)        \
+            $(LIBPNG_OBJ32)       $(LIBPNG_OBJ64)       \
+            $(LIBJPEG_OBJ32)      $(LIBJPEG_OBJ64)      \
+            $(LIBSDL_OBJ32)       $(LIBSDL_OBJ64)       \
+            $(MOLTENVK_OBJ)
 
 $(OBJ_DIRS):
 	mkdir -p $@
@@ -321,7 +424,6 @@ GOAL_TARGETS += dist
 # Only drag in WINE_OUT if they need to be built at all, otherwise this doesn't imply a rebuild of wine.  If wine is in
 # the explicit targets, specify that this should occur after.
 dist: $(DIST_TARGETS) | $(WINE_OUT) $(filter $(MAKECMDGOALS),wine64 wine32 wine) $(DST_DIR)
-	rm -rf $(abspath $(DIST_PREFIX)) && \
 	WINEPREFIX=$(abspath $(DIST_PREFIX)) $(WINE_OUT_BIN) wineboot && \
 		WINEPREFIX=$(abspath $(DIST_PREFIX)) $(WINE_OUT_SERVER) -w && \
 		ln -s $(FONTLINKPATH)/LiberationSans-Regular.ttf $(abspath $(DIST_PREFIX))/drive_c/windows/Fonts/arial.ttf && \
@@ -345,6 +447,353 @@ install: dist | $(filter-out dist deploy install,$(MAKECMDGOALS))
 	@echo "Installed Proton to "$(STEAM_DIR)/compatibilitytools.d/$(BUILD_NAME)
 	@echo "You may need to restart Steam to select this tool"
 
+##
+## freetype
+##
+
+ifeq ($(OSX),1) # currently only for OS X builds
+
+## Autogen steps for freetype
+FREETYPE_AUTOGEN_FILES := $(FREETYPE)/builds/unix/configure
+
+$(FREETYPE_AUTOGEN_FILES): $(FREETYPE)/builds/unix/configure.raw $(FREETYPE)/autogen.sh
+	cd $(FREETYPE) && ./autogen.sh
+
+## Create & configure object directory for freetype
+
+FREETYPE_CONFIGURE_FILES32 := $(FREETYPE_OBJ32)/unix-cc.mk $(FREETYPE_OBJ32)/Makefile
+FREETYPE_CONFIGURE_FILES64 := $(FREETYPE_OBJ64)/unix-cc.mk $(FREETYPE_OBJ64)/Makefile
+
+# 64-bit configure
+$(FREETYPE_CONFIGURE_FILES64): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FREETYPE_OBJ64)
+	cd $(dir $@) && \
+		$(abspath $(FREETYPE)/configure) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED) PKG_CONFIG=false \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
+			--prefix=$(abspath $(TOOLS_DIR64)) --without-png --host x86_64-apple-darwin && \
+		echo 'LIBRARY := libprotonfreetype' >> unix-cc.mk
+
+# 32bit-configure
+$(FREETYPE_CONFIGURE_FILES32): $(FREETYPE_AUTOGEN_FILES) $(MAKEFILE_DEP) | $(FREETYPE_OBJ32)
+	cd $(dir $@) && \
+		$(abspath $(FREETYPE)/configure) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED) PKG_CONFIG=false \
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)" \
+			--prefix=$(abspath $(TOOLS_DIR32)) --without-png --host i686-apple-darwin && \
+		echo 'LIBRARY := libprotonfreetype' >> unix-cc.mk
+
+## Freetype goals
+FREETYPE_TARGETS = freetype freetype32 freetype64 freetype_autogen freetype_configure freetype_configure32 freetype_configure64
+
+ALL_TARGETS += $(FREETYPE_TARGETS)
+GOAL_TARGETS_LIBS += freetype
+
+.PHONY: $(FREETYPE_TARGETS)
+
+freetype_configure: $(FREETYPE_CONFIGURE_FILES32) $(FREETYPE_CONFIGURE_FILES64)
+
+freetype_configure64: $(FREETYPE_CONFIGURE_FILES64)
+
+freetype_configure32: $(FREETYPE_CONFIGURE_FILES32)
+
+freetype_autogen: $(FREETYPE_AUTOGEN_FILES)
+
+freetype: freetype32 freetype64
+
+# Make silliness to make both the explicit freetype goal and the outfile come from the same recipe
+.INTERMEDIATE: freetype64-intermediate freetype32-intermediate
+
+$(FREETYPE_OUT64) freetype64: freetype64-intermediate
+
+$(FREETYPE_OUT32) freetype32: freetype32-intermediate
+
+freetype64-intermediate: $(FREETYPE_CONFIGURE_FILES64)
+	$(MAKE) -C $(FREETYPE_OBJ64)
+	$(MAKE) -C $(FREETYPE_OBJ64) install
+	mkdir -p $(DST_DIR)/lib64
+	cp $(FREETYPE_OUT64) $(DST_DIR)/lib64
+	$(STRIP) $(DST_DIR)/lib64/libprotonfreetype.dylib
+
+freetype32-intermediate: $(FREETYPE_CONFIGURE_FILES32)
+	$(MAKE) -C $(FREETYPE_OBJ32)
+	$(MAKE) -C $(FREETYPE_OBJ32) install
+	mkdir -p $(DST_DIR)/lib
+	cp $(FREETYPE_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libprotonfreetype.dylib
+
+endif # ifeq ($(OSX),1)
+
+##
+## libpng
+##
+
+ifeq ($(OSX),1) # currently only for OS X builds
+
+## Synthetic libpng with modified Makefile.am for autogen
+$(LIBPNGPROTON)/.created: $(LIBPNG) $(MAKEFILE_DEP) $(LIBPNG)/autogen.sh $(LIBPNG)/configure.ac
+	rm -rf ./$(LIBPNGPROTON)
+	mkdir -p $(LIBPNGPROTON)/
+	cd $(LIBPNGPROTON)/ && \
+		ln -sfv ../$(LIBPNG)/* .
+	rm $(LIBPNGPROTON)/Makefile.am
+	cp $(LIBPNG)/Makefile.am $(LIBPNGPROTON)
+	sed -i -e 's/libpng@PNGLIB_MAJOR@@PNGLIB_MINOR@/libprotonpng@PNGLIB_MAJOR@@PNGLIB_MINOR@/' $(LIBPNGPROTON)/Makefile.am
+	cd $(LIBPNGPROTON) && ./autogen.sh --maintainer
+	touch $(LIBPNGPROTON)/.created
+
+$(LIBPNGPROTON): $(LIBPNGPROTON)/.created
+
+## Create & configure object directory for libpng
+
+LIBPNG_CONFIGURE_FILES32 := $(LIBPNG_OBJ32)/Makefile
+LIBPNG_CONFIGURE_FILES64 := $(LIBPNG_OBJ64)/Makefile
+
+# 64-bit configure
+$(LIBPNG_CONFIGURE_FILES64): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPROTON) | $(LIBPNG_OBJ64)
+	cd $(dir $@) && \
+		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+# 32bit-configure
+$(LIBPNG_CONFIGURE_FILES32): $(LIBPNG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBPNGPROTON) | $(LIBPNG_OBJ32)
+	cd $(dir $@) && \
+		$(abspath $(LIBPNGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
+
+## Libpng goals
+LIBPNG_TARGETS = libpng libpng32 libpng64 libpng_configure libpng_configure32 libpng_configure64
+
+ALL_TARGETS += $(LIBPNG_TARGETS)
+GOAL_TARGETS_LIBS += libpng
+
+.PHONY: $(LIBPNG_TARGETS)
+
+libpng_configure: $(LIBPNG_CONFIGURE_FILES32) $(LIBPNG_CONFIGURE_FILES64)
+
+libpng_configure64: $(LIBPNG_CONFIGURE_FILES64)
+
+libpng_configure32: $(LIBPNG_CONFIGURE_FILES32)
+
+libpng: libpng32 libpng64
+
+# Make silliness to make both the explicit libpng goal and the outfile come from the same recipe
+.INTERMEDIATE: libpng64-intermediate libpng32-intermediate
+
+$(LIBPNG_OUT64) libpng64: libpng64-intermediate
+
+$(LIBPNG_OUT32) libpng32: libpng32-intermediate
+
+libpng64-intermediate: $(LIBPNG_CONFIGURE_FILES64)
+	$(MAKE) -C $(LIBPNG_OBJ64)
+	$(MAKE) -C $(LIBPNG_OBJ64) install
+	cp $(LIBPNG_OUT64) $(DST_DIR)/lib64
+	$(STRIP) $(DST_DIR)/lib64/libprotonpng16.dylib
+
+libpng32-intermediate: $(LIBPNG_CONFIGURE_FILES32)
+	$(MAKE) -C $(LIBPNG_OBJ32)
+	$(MAKE) -C $(LIBPNG_OBJ32) install
+	cp $(LIBPNG_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libprotonpng16.dylib
+
+endif # ifeq ($(OSX),1)
+
+##
+## libjpeg
+##
+
+ifeq ($(OSX),1) # currently only for OS X builds
+
+## Synthetic libjpeg for autogen
+$(LIBJPEGPROTON)/.created: $(LIBJPEG) $(MAKEFILE_DEP) $(LIBJPEG)/configure.ac
+	rm -rf ./$(LIBJPEGPROTON)
+	mkdir -p $(LIBJPEGPROTON)/
+	cd $(LIBJPEGPROTON)/ && \
+		ln -sfv ../$(LIBJPEG)/* .
+	rm -f $(LIBJPEGPROTON)/configure
+	cd $(LIBJPEGPROTON) && autoreconf -fiv
+	touch $(LIBJPEGPROTON)/.created
+
+$(LIBJPEGPROTON): $(LIBJPEGPROTON)/.created
+
+## Create & configure object directory for libjpeg
+
+LIBJPEG_CONFIGURE_FILES32 := $(LIBJPEG_OBJ32)/Makefile
+LIBJPEG_CONFIGURE_FILES64 := $(LIBJPEG_OBJ64)/Makefile
+
+# 64-bit configure
+$(LIBJPEG_CONFIGURE_FILES64): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ64)
+	cd $(dir $@) && \
+		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-O3 -g $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+# 32bit-configure
+$(LIBJPEG_CONFIGURE_FILES32): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ32)
+	cd $(dir $@) && \
+		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
+			CFLAGS="-O3 -g -m32 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
+
+## Libjpeg goals
+LIBJPEG_TARGETS = libjpeg libjpeg32 libjpeg64 libjpeg_configure libjpeg_configure32 libjpeg_configure64
+
+ALL_TARGETS += $(LIBJPEG_TARGETS)
+GOAL_TARGETS_LIBS += libjpeg
+
+.PHONY: $(LIBJPEG_TARGETS)
+
+libjpeg_configure: $(LIBJPEG_CONFIGURE_FILES32) $(LIBJPEG_CONFIGURE_FILES64)
+
+libjpeg_configure64: $(LIBJPEG_CONFIGURE_FILES64)
+
+libjpeg_configure32: $(LIBJPEG_CONFIGURE_FILES32)
+
+libjpeg: libjpeg32 libjpeg64
+
+# Make silliness to make both the explicit libjpeg goal and the outfile come from the same recipe
+.INTERMEDIATE: libjpeg64-intermediate libjpeg32-intermediate
+
+$(LIBJPEG_OUT64) libjpeg64: libjpeg64-intermediate
+
+$(LIBJPEG_OUT32) libjpeg32: libjpeg32-intermediate
+
+libjpeg64-intermediate: $(LIBJPEG_CONFIGURE_FILES64)
+	$(MAKE) -C $(LIBJPEG_OBJ64)
+	$(MAKE) -C $(LIBJPEG_OBJ64) install
+	mv $(TOOLS_DIR64)/lib/lib{,proton}jpeg.dylib
+	cp $(LIBJPEG_OUT64) $(DST_DIR)/lib64
+	$(STRIP) $(DST_DIR)/lib64/libprotonjpeg.dylib
+
+libjpeg32-intermediate: $(LIBJPEG_CONFIGURE_FILES32)
+	$(MAKE) -C $(LIBJPEG_OBJ32)
+	$(MAKE) -C $(LIBJPEG_OBJ32) install
+	mv $(TOOLS_DIR32)/lib/lib{,proton}jpeg.dylib
+	cp $(LIBJPEG_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libprotonjpeg.dylib
+
+endif # ifeq ($(OSX),1)
+
+
+##
+## moltenvk
+##
+
+ifeq ($(OSX),1) # currently only for OS X builds
+## Symlink'd moltenvk directory because it has hard-coded build steps that look for ./Package
+$(MOLTENVKPROTON)/.created: $(MOLTENVK) $(MAKEFILE_DEP) $(MOLTENVK_OBJ) | $(MOLTENVK)/External
+	rm -rf ./$(MOLTENVKPROTON)
+	mkdir -p $(MOLTENVKPROTON)/
+	cd $(MOLTENVKPROTON)/ && \
+		ln -sfv ../$(MOLTENVK)/* .
+	# Package -> obj-moltenvk/Package
+	rm -f $(MOLTENVKPROTON)/Package
+	cd $(MOLTENVKPROTON)/ && \
+		ln -sv ../$(MOLTENVK_OBJ)/Package
+	touch $(MOLTENVKPROTON)/.created
+
+# This needs to exist before we do symlinking
+$(MOLTENVK)/External:
+	mkdir -p $@
+
+$(MOLTENVKPROTON): $(MOLTENVKPROTON)/.created
+
+## Moltenvk goals
+
+.PHONY: moltenvk
+
+ALL_TARGETS += moltenvk
+GOAL_TARGETS_LIBS += moltenvk
+
+# Make silliness to make both the explicit moltenvk goal and the outfile come from the same recipe
+.INTERMEDIATE: moltenvk-intermediate
+
+$(MOLTENVK_OUT) moltenvk: moltenvk-intermediate
+
+# The ./fetchDependencies step is not contained within the build directory, but the way it works is very messy to split
+# out as such.  We could run it in the symlink'd directory, but then we'd be fetching all of its dependencies per build,
+# when they are invariant.  This should still work decently with multiple builds, though perhaps not running them in
+# parallel.
+moltenvk-intermediate: $(MAKEFILE_DEP) $(MOLTENVKPROTON) | $(MOLTENVK_OBJ)
+	cd $(MOLTENVK) && ./fetchDependencies
+	mkdir -p $(MOLTENVK_OBJ)/Package
+	cd $(MOLTENVKPROTON) && xcodebuild -scheme 'MoltenVK (Release)' build -derivedDataPath $(abspath $(MOLTENVK_OBJ)) \
+		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) CC= CXX=
+
+	mkdir -p $(TOOLS_DIR64)/include $(TOOLS_DIR64)/lib $(DST_DIR)/lib64
+	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/include/* $(TOOLS_DIR64)/include/
+	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(TOOLS_DIR64)/lib/
+	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/macOS/libMoltenVK.dylib $(DST_DIR)/lib64/
+endif # ifeq ($(OSX),1)
+
+##
+## libsdl
+##
+
+ifeq ($(OSX),1) # currently only for OS X builds
+
+## Synthetic libsdl for autogen
+$(LIBSDLPROTON)/.created: $(LIBSDL) $(MAKEFILE_DEP) $(LIBSDL)/configure.in $(LIBSDL)/autogen.sh
+	rm -rf ./$(LIBSDLPROTON)
+	mkdir -p $(LIBSDLPROTON)/
+	cd $(LIBSDLPROTON)/ && \
+		ln -sfv ../$(LIBSDL)/* .
+	rm -f $(LIBSDLPROTON)/configure
+	cd $(LIBSDLPROTON) && ./autogen.sh
+	touch $(LIBSDLPROTON)/.created
+
+$(LIBSDLPROTON): $(LIBSDLPROTON)/.created
+
+## Create & configure object directory for libsdl
+
+LIBSDL_CONFIGURE_FILES32 := $(LIBSDL_OBJ32)/Makefile
+LIBSDL_CONFIGURE_FILES64 := $(LIBSDL_OBJ64)/Makefile
+
+# 64-bit configure
+$(LIBSDL_CONFIGURE_FILES64): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ64)
+	cd $(dir $@) && \
+		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+# 32bit-configure
+$(LIBSDL_CONFIGURE_FILES32): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ32)
+	cd $(dir $@) && \
+		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
+			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
+
+## Libsdl goals
+LIBSDL_TARGETS = libsdl libsdl32 libsdl64 libsdl_configure libsdl_configure32 libsdl_configure64
+
+ALL_TARGETS += $(LIBSDL_TARGETS)
+GOAL_TARGETS_LIBS += libsdl
+
+.PHONY: $(LIBSDL_TARGETS)
+
+libsdl_configure: $(LIBSDL_CONFIGURE_FILES32) $(LIBSDL_CONFIGURE_FILES64)
+
+libsdl_configure64: $(LIBSDL_CONFIGURE_FILES64)
+
+libsdl_configure32: $(LIBSDL_CONFIGURE_FILES32)
+
+libsdl: libsdl32 libsdl64
+
+# Make silliness to make both the explicit libsdl goal and the outfile come from the same recipe
+.INTERMEDIATE: libsdl64-intermediate libsdl32-intermediate
+
+$(LIBSDL_OUT64) libsdl64: libsdl64-intermediate
+
+$(LIBSDL_OUT32) libsdl32: libsdl32-intermediate
+
+libsdl64-intermediate: $(LIBSDL_CONFIGURE_FILES64)
+	$(MAKE) -C $(LIBSDL_OBJ64)
+	$(MAKE) -C $(LIBSDL_OBJ64) install-hdrs
+	$(MAKE) -C $(LIBSDL_OBJ64) install-lib
+	cp $(LIBSDL_OUT64) $(DST_DIR)/lib64
+	$(STRIP) $(DST_DIR)/lib64/libSDL2.dylib
+
+libsdl32-intermediate: $(LIBSDL_CONFIGURE_FILES32)
+	$(MAKE) -C $(LIBSDL_OBJ32)
+	$(MAKE) -C $(LIBSDL_OBJ32) install-hdrs
+	$(MAKE) -C $(LIBSDL_OBJ32) install-lib
+	cp $(LIBSDL_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libSDL2.dylib
+
+endif # ifeq ($(OSX),1)
 
 ##
 ## ffmpeg
@@ -590,7 +1039,7 @@ lsteamclient: lsteamclient32 lsteamclient64
 
 lsteamclient64: SHELL = $(CONTAINER_SHELL64)
 lsteamclient64: $(LSTEAMCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" CXXFLAGS="-Wno-attributes $(COMMON_FLAGS) -g" CFLAGS="$(COMMON_FLAGS) -g" \
+	+env PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" LDFLAGS="$(LDFLAGS)" CXXFLAGS="-Wno-attributes $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" \
 		$(MAKE) -C $(LSTEAMCLIENT_OBJ64)
 	[ x"$(STRIP)" = x ] || $(STRIP) $(LSTEAMCLIENT_OBJ64)/lsteamclient.dll.so
 	mkdir -pv $(DST_DIR)/lib64/wine/
@@ -598,7 +1047,7 @@ lsteamclient64: $(LSTEAMCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filte
 
 lsteamclient32: SHELL = $(CONTAINER_SHELL32)
 lsteamclient32: $(LSTEAMCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes $(COMMON_FLAGS) -g" CFLAGS="-m32 $(COMMON_FLAGS) -g" \
+	+env PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(COMMON_FLAGS) -g $(CFLAGS)" \
 		$(MAKE) -C $(LSTEAMCLIENT_OBJ32)
 	[ x"$(STRIP)" = x ] || $(STRIP) $(LSTEAMCLIENT_OBJ32)/lsteamclient.dll.so
 	mkdir -pv $(DST_DIR)/lib/wine/
@@ -612,6 +1061,14 @@ lsteamclient32: $(LSTEAMCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filte
 
 WINE_CONFIGURE_FILES32 := $(WINE_OBJ32)/Makefile
 WINE_CONFIGURE_FILES64 := $(WINE_OBJ64)/Makefile
+
+# On OS X we need ordering dependencies on these projects so configure can find them properly
+WINE_ORDER_DEPS64 :=
+WINE_ORDER_DEPS32 :=
+ifeq ($(OSX),1)
+	WINE_ORDER_DEPS64 += $(FREETYPE_OUT64) $(LIBPNG_OUT64) $(LIBJPEG_OUT64) $(LIBSDL_OUT64) $(MOLTENVK_OUT)
+	WINE_ORDER_DEPS32 += $(FREETYPE_OUT32) $(LIBPNG_OUT32) $(LIBJPEG_OUT32) $(LIBSDL_OUT32) $(MOLTENVK_OUT)
+endif
 
 WINE_COMMON_MAKE_ARGS := \
 	STRIP="$(STRIP_QUOTED)" \
@@ -631,14 +1088,20 @@ WINE32_MAKE_ARGS := \
 
 # 64bit-configure
 $(WINE_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
-$(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WINE_OBJ64)
+$(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WINE_OBJ64) $(WINE_ORDER_DEPS64)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(SRCDIR))/contrib/include -g $(COMMON_FLAGS)" \
-		LDFLAGS=-L$(abspath $(TOOLS_DIR64))/lib \
+		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(SRCDIR))/contrib/include -g $(COMMON_FLAGS) $(CFLAGS)" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib $LDFLAGS" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR64))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
 		CXX=$(CXX_QUOTED) \
+		PNG_CFLAGS=$(PNG64_CFLAGS) \
+		PNG_LIBS=$(PNG64_LIBS) \
+		JPEG_CFLAGS=$(JPEG64_CFLAGS) \
+		JPEG_LIBS=$(JPEG64_LIBS) \
+		FREETYPE_CFLAGS=$(FREETYPE64_CFLAGS) \
+		FREETYPE_LIBS=$(FREETYPE64_LIBS) \
 		../$(WINE)/configure \
 			$(WINE64_AUTOCONF) \
 			--without-curses \
@@ -649,11 +1112,17 @@ $(WINE_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
 $(WINE_CONFIGURE_FILES32): $(MAKEFILE_DEP) | $(WINE_OBJ32) $(WINE_ORDER_DEPS32)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
-		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -I$(abspath $(SRCDIR))/contrib/include -g $(COMMON_FLAGS)" \
-		LDFLAGS=-L$(abspath $(TOOLS_DIR32))/lib \
+		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -I$(abspath $(SRCDIR))/contrib/include -g $(COMMON_FLAGS) $(CFLAGS)" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR32))/lib $(LDFLAGS)" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR32))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
 		CXX=$(CXX_QUOTED) \
+		PNG_CFLAGS=$(PNG32_CFLAGS) \
+		PNG_LIBS=$(PNG32_LIBS) \
+		JPEG_CFLAGS=$(JPEG32_CFLAGS) \
+		JPEG_LIBS=$(JPEG32_LIBS) \
+		FREETYPE_CFLAGS=$(FREETYPE32_CFLAGS) \
+		FREETYPE_LIBS=$(FREETYPE32_LIBS) \
 		../$(WINE)/configure \
 			$(WINE32_AUTOCONF) \
 			--without-curses \
@@ -685,6 +1154,11 @@ $(WINE_BUILDTOOLS64) $(WINE_OUT) wine64: wine64-intermediate
 wine64-intermediate: SHELL = $(CONTAINER_SHELL64)
 wine64-intermediate: $(WINE_CONFIGURE_FILES64)
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS)
+ifeq ($(OSX),1)
+	find $(WINE_OBJ64) -name dinput.dll.so
+	find $(WINE_OBJ64) -name xaudio*.so
+	exit 1
+endif
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS) install-lib
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE64_MAKE_ARGS) install-lib install-dev
 	rm -f $(DST_DIR)/bin/{msiexec,notepad,regedit,regsvr32,wineboot,winecfg,wineconsole,winedbg,winefile,winemine,winepath}
@@ -697,6 +1171,11 @@ $(WINE_BUILDTOOLS32) wine32: wine32-intermediate
 wine32-intermediate: SHELL = $(CONTAINER_SHELL32)
 wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE_COMMON_MAKE_ARGS)
+ifeq ($(OSX),1)
+	find $(WINE_OBJ32) -name dinput.dll.so
+	find $(WINE_OBJ32) -name xaudio*.so
+	exit 1
+endif
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE_COMMON_MAKE_ARGS) install-lib
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE32_MAKE_ARGS) install-lib install-dev
 	mkdir -p $(DST_DIR)/{lib,bin}
@@ -776,7 +1255,7 @@ vrclient: vrclient32 vrclient64
 
 vrclient64: SHELL = $(CONTAINER_SHELL64)
 vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env CXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g" CFLAGS="$(COMMON_FLAGS) -g" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
+	+env LDFLAGS="$(LDFLAGS)" CCXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ64)
 	cd $(VRCLIENT_OBJ64) && \
 		PATH=$(abspath $(TOOLS_DIR64))/bin:$(PATH) \
@@ -788,7 +1267,7 @@ vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKE
 
 vrclient32: SHELL = $(CONTAINER_SHELL32)
 vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(COMMON_FLAGS) -g" CFLAGS="-m32 $(COMMON_FLAGS) -g" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
+	+env LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ32)
 	cd $(VRCLIENT_OBJ32) && \
 		PATH=$(abspath $(TOOLS_DIR32))/bin:$(PATH) \

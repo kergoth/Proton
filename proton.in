@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env @PYTHON_NAME@
 
 #script to launch Wine with the correct environment
 
@@ -261,7 +261,17 @@ def create_fonts_symlinks(prefix_path):
         else:
             os.symlink(fname, lname)
 
-prefix_lock = FileLock(os.environ["STEAM_COMPAT_DATA_PATH"] + "/pfx.lock", timeout=-1)
+prefix_lockfile = os.environ["STEAM_COMPAT_DATA_PATH"] + "/pfx.lock"
+if not os.path.exists(prefix_lockfile):
+    import errno
+    try:
+        os.makedirs(os.environ["STEAM_COMPAT_DATA_PATH"])
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+    open(prefix_lockfile, 'w').close()
+
+prefix_lock = FileLock(prefix_lockfile, timeout=-1)
 with prefix_lock:
     version_file = os.environ["STEAM_COMPAT_DATA_PATH"] + "/version"
     if os.path.exists(version_file):
@@ -287,7 +297,7 @@ with prefix_lock:
         steamdir = os.environ["STEAM_COMPAT_CLIENT_INSTALL_PATH"]
     else:
         #linux-only fallback, really shouldn't get here
-        steamdir = os.environ["HOME"] + ".steam/root/"
+        steamdir = os.environ["HOME"] + "/.steam/root/"
     dst = prefix + "/drive_c/Program Files (x86)/"
     makedirs(dst + "Steam")
     filestocopy = ["steamclient.dll",
@@ -587,6 +597,10 @@ elif sys.argv[1] == "waitforexitandrun":
     run_wine([bindir + "/wineserver", "-w"])
     #then run
     run()
+elif sys.argv[1] == "rundirect":
+    run_wine(sys.argv[2:])
+elif sys.argv[1] == "dumpenv":
+    dump_dbg_env(sys.stdout)
 elif sys.argv[1] == "getcompatpath":
     #linux -> windows path
     path = subprocess.check_output([wine_path, "winepath", "-w", sys.argv[2]], env=env, stderr=lfile)
