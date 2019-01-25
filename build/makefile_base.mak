@@ -396,7 +396,7 @@ $(FFMPEG_CONFIGURE_FILES32): $(FFMPEG)/configure $(MAKEFILE_DEP) | $(FFMPEG_OBJ3
 		$(abspath $(FFMPEG))/configure \
 			--cc=$(CC_QUOTED) --cxx=$(CXX_QUOTED) \
 			--prefix=$(abspath $(TOOLS_DIR32)) \
-			--extra-cflags=$(FFMPEG_CROSS_CFLAGS) --extra-ldflags=$(FFMPEG_CROSS_LDFLAGS) \
+			--extra-cflags="-m32 $(FFMPEG_CROSS_CFLAGS)" --extra-ldflags="-m32 $(FFMPEG_CROSS_LDFLAGS)" \
 			--disable-static \
 			--enable-shared \
 			--disable-programs \
