@@ -957,7 +957,8 @@ faudio32: $(FAUDIO_CONFIGURE_FILES32)
 	+$(MAKE) -C $(FAUDIO_OBJ32) install VERBOSE=1
 	mkdir -p $(DST_DIR)/lib
 	cp -L $(TOOLS_DIR32)/lib/libFAudio* $(DST_DIR)/lib/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libFAudio.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libFAudio.$(LIB_SUFFIX)
+
 
 faudio64: SHELL = $(CONTAINER_SHELL64)
 faudio64: $(FAUDIO_CONFIGURE_FILES64)
@@ -965,7 +966,7 @@ faudio64: $(FAUDIO_CONFIGURE_FILES64)
 	+$(MAKE) -C $(FAUDIO_OBJ64) install VERBOSE=1
 	mkdir -p $(DST_DIR)/lib64
 	cp -L $(TOOLS_DIR64)/lib/libFAudio* $(DST_DIR)/lib64/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libFAudio.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libFAudio.$(LIB_SUFFIX)
 
 ##
 ## lsteamclient
