@@ -973,14 +973,15 @@ faudio32: $(FAUDIO_CONFIGURE_FILES32)
 	ninja -C $(FAUDIO_OBJ32) install
 	mkdir -p $(DST_DIR)/lib
 	cp -L $(TOOLS_DIR32)/lib/libFAudio* $(DST_DIR)/lib/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libFAudio.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libFAudio.$(LIB_SUFFIX)
+
 
 faudio64: SHELL = $(CONTAINER_SHELL64)
 faudio64: $(FAUDIO_CONFIGURE_FILES64)
 	ninja -C $(FAUDIO_OBJ64) install
 	mkdir -p $(DST_DIR)/lib64
 	cp -L $(TOOLS_DIR64)/lib/libFAudio* $(DST_DIR)/lib64/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libFAudio.so
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libFAudio.$(LIB_SUFFIX)
 
 ##
 ## lsteamclient
