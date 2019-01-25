@@ -680,7 +680,7 @@ $(MOLTENVKPROTON)/.created: $(MOLTENVK) $(MAKEFILE_DEP) $(MOLTENVK_OBJ) | $(MOLT
 	rm -rf ./$(MOLTENVKPROTON)
 	mkdir -p $(MOLTENVKPROTON)/
 	cd $(MOLTENVKPROTON)/ && \
-		ln -sfv ../$(MOLTENVK)/* .
+		cp -a ../$(MOLTENVK)/* .
 	# Package -> obj-moltenvk/Package
 	rm -f $(MOLTENVKPROTON)/Package
 	cd $(MOLTENVKPROTON)/ && \
