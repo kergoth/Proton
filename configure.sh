@@ -108,8 +108,11 @@ function configure() {
     fi
 
     # DXVK?
-    if [[ -n $OSX && ! -n $arg_force_dxvk ]]; then
-        echo "NO_DXVK := 1"
+    if [[ -n $OSX ]]; then
+        echo "OSX := 1"
+        if [[ ! -n $arg_force_dxvk ]]; then
+            echo "NO_DXVK := 1"
+        fi
     fi
 
     # SteamRT
