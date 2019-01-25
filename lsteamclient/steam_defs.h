@@ -1,5 +1,9 @@
 #include <stdint.h>
-#include <linux/limits.h>
+#ifdef __APPLE__
+# include <sys/syslimits.h>
+#else
+# include <linux/limits.h>
+#endif
 typedef uint32_t EHTMLMouseButton, EHTMLKeyModifiers;
 
 #ifndef __cplusplus
