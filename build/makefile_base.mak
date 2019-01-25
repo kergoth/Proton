@@ -783,6 +783,8 @@ libsdl64-intermediate: $(LIBSDL_CONFIGURE_FILES64)
 	$(MAKE) -C $(LIBSDL_OBJ64)
 	$(MAKE) -C $(LIBSDL_OBJ64) install-hdrs
 	$(MAKE) -C $(LIBSDL_OBJ64) install-lib
+	mkdir -p $(TOOLS_DIR64)/lib/pkgconfig
+	install -m 644 $(LIBSDL_OBJ64)/sdl2.pc $(TOOLS_DIR64)/lib/pkgconfig/sdl2.pc
 	cp $(LIBSDL_OUT64) $(DST_DIR)/lib64
 	$(STRIP) $(DST_DIR)/lib64/libSDL2.dylib
 
@@ -790,9 +792,10 @@ libsdl32-intermediate: $(LIBSDL_CONFIGURE_FILES32)
 	$(MAKE) -C $(LIBSDL_OBJ32)
 	$(MAKE) -C $(LIBSDL_OBJ32) install-hdrs
 	$(MAKE) -C $(LIBSDL_OBJ32) install-lib
+	mkdir -p $(TOOLS_DIR32)/lib/pkgconfig
+	install -m 644 $(LIBSDL_OBJ32)/sdl2.pc $(TOOLS_DIR32)/lib/pkgconfig/sdl2.pc
 	cp $(LIBSDL_OUT32) $(DST_DIR)/lib
 	$(STRIP) $(DST_DIR)/lib/libSDL2.dylib
-
 endif # ifeq ($(OSX),1)
 
 ##
