@@ -1259,7 +1259,7 @@ vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKE
 	+env LDFLAGS="$(LDFLAGS)" CCXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ64)
 	cd $(VRCLIENT_OBJ64) && \
-		PATH=$(abspath $(TOOLS_DIR64))/bin:$(PATH) \
+		PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 			winebuild --dll --fake-module -E ../$(VRCLIENT)/vrclient_x64/vrclient_x64.spec -o vrclient_x64.dll.fake && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(VRCLIENT_OBJ64)/vrclient_x64.dll.so && \
 		mkdir -pv ../$(DST_DIR)/lib64/wine/fakedlls && \
@@ -1271,7 +1271,7 @@ vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKE
 	+env LDFLAGS="-m32 $(LDFLAGS)" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="-m32 $(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ32)
 	cd $(VRCLIENT_OBJ32) && \
-		PATH=$(abspath $(TOOLS_DIR32))/bin:$(PATH) \
+		PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 			winebuild --dll --fake-module -E ../$(VRCLIENT32)/vrclient/vrclient.spec -o vrclient.dll.fake && \
 		[ x"$(STRIP)" = x ] || $(STRIP) ../$(VRCLIENT_OBJ32)/vrclient.dll.so && \
 		mkdir -pv ../$(DST_DIR)/lib/wine/fakedlls && \
