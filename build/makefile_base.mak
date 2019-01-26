@@ -1181,6 +1181,7 @@ wine64-intermediate: $(WINE_CONFIGURE_FILES64)
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS)
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS) install-lib
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE64_MAKE_ARGS) install-lib install-dev
+	install_name_tool -change "$(abspath "$(TOOLS_DIR64)")/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$(DST_DIR)/lib64/wine/dinput.dll.so"
 	rm -f $(DST_DIR)/bin/{msiexec,notepad,regedit,regsvr32,wineboot,winecfg,wineconsole,winedbg,winefile,winemine,winepath}
 	rm -rf $(DST_DIR)/share/man/
 
@@ -1195,6 +1196,7 @@ wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE32_MAKE_ARGS) install-lib install-dev
 	mkdir -p $(DST_DIR)/{lib,bin}
 	cp -a $(WINE_DST32)/lib $(DST_DIR)/
+	install_name_tool -change "$(abspath "$(TOOLS_DIR32)")/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$(DST_DIR)/lib/wine/dinput.dll.so"
 	cp -a $(WINE_DST32)/bin/wine $(DST_DIR)/bin/
 	[ "x"$(OSX) = "x1" ] || cp -a ../$(WINE_DST32)/bin/wine-preloader ../$(DST_DIR)/bin/
 
