@@ -1256,7 +1256,7 @@ vrclient: vrclient32 vrclient64
 
 vrclient64: SHELL = $(CONTAINER_SHELL64)
 vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env LDFLAGS="$(LDFLAGS)" CCXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
+	+env LDFLAGS="$(LDFLAGS)" CXXFLAGS="-Wno-attributes -std=c++0x $(COMMON_FLAGS) -g $(CXXFLAGS) $(CFLAGS)" CFLAGS="$(COMMON_FLAGS) -g $(CFLAGS)" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ64)
 	cd $(VRCLIENT_OBJ64) && \
 		PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
