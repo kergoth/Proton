@@ -383,7 +383,7 @@ $(DIST_VERSION): | $(DST_DIR)
 	cp $(DIST_VERSION) $(DST_BASE)/
 
 $(DIST_COMPAT_MANIFEST): $(COMPAT_MANIFEST_TEMPLATE) $(MAKEFILE_DEP) | $(DST_DIR)
-	sed -r 's|##BUILD_NAME##|$(BUILD_NAME)|' $< > $@
+	sed -E 's|##BUILD_NAME##|$(BUILD_NAME)|' $< > $@
 
 $(DIST_GECKO_DIR):
 	mkdir -p $@
