@@ -1104,7 +1104,7 @@ $(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WINE_OBJ64) $(WINE_ORDER_DEPS64)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
 		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(SRCDIR))/contrib/include -g $(COMMON_FLAGS) $(CFLAGS)" \
-		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib $LDFLAGS" \
+		LDFLAGS="-L$(abspath $(TOOLS_DIR64))/lib $(LDFLAGS)" \
 		PKG_CONFIG_PATH=$(abspath $(TOOLS_DIR64))/lib/pkgconfig \
 		CC=$(CC_QUOTED) \
 		CXX=$(CXX_QUOTED) \
