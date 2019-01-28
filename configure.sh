@@ -32,8 +32,31 @@ finish()   { stat "$@"; exit 0; }
 cmd()      { showcmd "$@"; "$@"; }
 
 # Environment
-OSX=""
-[[ $(uname || true) != Darwin ]] || OSX=1
+case "$OSTYPE" in
+    darwin*)
+        macsdk=
+        OSX=1
+        case $(sw_vers -productVersion) in
+            10.14*)
+                # 10.14 kills 32-bit builds, so we require a 10.13 SDK
+                for sdkdir in /SDKs /SDKs/MacOSX.platform /Developer/SDKs /Developer/SDKs/MacOSX.platform \
+                              /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs; do
+                    if [[ -e "$sdkdir/MacOSX10.13.sdk" ]]; then
+                        macsdk="$sdkdir"
+                        break
+                    fi
+                done
+                if [[ -z "$macsdk" ]]; then
+                    die "No macOS 10.13 SDK found, but this is a 10.14 host. Please obtain and insstall a 10.13 SDK to allow the build to continue."
+                fi
+                ;;
+        esac
+        ;;
+    *)
+        OSX=
+        ;;
+esac
+
 
 #
 # Configure
@@ -103,6 +126,16 @@ function configure() {
     echo "BUILD_NAME := $(escape_for_make "$build_name")"
     if [[ -n $OSX ]]; then
         echo "OSX := 1"
+        if [[ -n "$macsdk" ]]; then
+            # When building on macOS 10.14, use the 10.13 SDK
+            cat <<END
+export MACOSX_DEPLOYMENT_TARGET = 10.13
+export SDKROOT = $macsdk/MacOSX10.13.sdk
+export CFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
+export CXXFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
+export LDFLAGS = -mmacosx-version-min=10.13 -Wl,-syslibroot,\$(SDKROOT)
+END
+        fi
     fi
 
     # ffmpeg?
