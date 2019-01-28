@@ -31,6 +31,10 @@ die()      { err "$@"; exit 1; }
 finish()   { stat "$@"; exit 0; }
 cmd()      { showcmd "$@"; "$@"; }
 
+# Environment
+OSX=""
+[[ $(uname || true) != Darwin ]] || OSX=1
+
 #
 # Configure
 #
@@ -97,6 +101,9 @@ function configure() {
     echo ""
     echo "SRCDIR     := $(escape_for_make "$srcdir")"
     echo "BUILD_NAME := $(escape_for_make "$build_name")"
+    if [[ -n $OSX ]]; then
+        echo "OSX := 1"
+    fi
 
     # ffmpeg?
     if [[ -n $arg_ffmpeg ]]; then
