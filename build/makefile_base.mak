@@ -414,7 +414,7 @@ $(DIST_GECKO32): | $(DIST_GECKO_DIR)
 
 $(DIST_FONTS): fonts
 	mkdir -p $@
-	cp $(FONTS_OBJ)/*.ttf "$@"
+	cp -n $(FONT_TTFS) "$@"
 
 .PHONY: dist
 
