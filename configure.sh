@@ -243,9 +243,14 @@ usage() {
   exit 1;
 }
 
-[[ $# -gt 0 ]] || usage info
+[[ -n "$OSX" || $# -gt 0 ]] || usage info
 parse_args "$@" || usage err
 [[ -z $arg_help ]] || usage info
+
+if [[ -n "$OSX" && (-z "$arg_steamrt32" && -z "$arg_steamrt64") ]]; then
+    # The Steam Runtime SDK is for Linux, so disable it when targeting OSX
+    arg_no_steamrt=1
+fi
 
 # Sanity check arguments
 if [[ -n $arg_no_steamrt && (-n $arg_steamrt32 || -n $arg_steamrt64) ]]; then
