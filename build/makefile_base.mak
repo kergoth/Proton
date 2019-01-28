@@ -482,6 +482,7 @@ $(FAUDIO_CONFIGURE_FILES32): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BI
 	cd $(dir $@) && \
 		../$(CMAKE_BIN32) $(abspath $(FAUDIO)) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR32))" \
+			-DFFmpeg_INCLUDE_DIR="$(abspath $(TOOLS_DIR32))/include" \
 			$(FAUDIO_CMAKE_FLAGS) \
 			-DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32"
 
@@ -490,6 +491,7 @@ $(FAUDIO_CONFIGURE_FILES64): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BI
 	cd $(dir $@) && \
 		../$(CMAKE_BIN64) $(abspath $(FAUDIO)) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR64))" \
+			-DFFmpeg_INCLUDE_DIR="$(abspath $(TOOLS_DIR64))/include" \
 			$(FAUDIO_CMAKE_FLAGS)
 
 faudio32: SHELL = $(CONTAINER_SHELL32)
