@@ -722,7 +722,7 @@ moltenvk-intermediate: $(MAKEFILE_DEP) $(MOLTENVKPROTON) | $(MOLTENVK_OBJ)
 	cd $(MOLTENVK) && ./fetchDependencies
 	mkdir -p $(MOLTENVK_OBJ)/Package
 	cd $(MOLTENVKPROTON) && xcodebuild -scheme 'MoltenVK (Release)' build -derivedDataPath $(abspath $(MOLTENVK_OBJ)) \
-		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) CC= CXX=
+		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED)
 
 	mkdir -p $(TOOLS_DIR64)/include $(TOOLS_DIR64)/lib $(DST_DIR)/lib64
 	cp -a $(MOLTENVK_OBJ)/Package/Release/MoltenVK/include/* $(TOOLS_DIR64)/include/
