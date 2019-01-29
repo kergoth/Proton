@@ -139,6 +139,9 @@ END
         if [[ -n $arg_force_dxvk ]]; then
             echo "NO_DXVK :="
         fi
+        echo "SUBMAKE_JOBS = $(($(sysctl -n hw.ncpu) * 2))"
+    else
+        echo "SUBMAKE_JOBS = $(($(grep -c processor /proc/cpuinfo) * 2))"
     fi
 
     # ffmpeg?
