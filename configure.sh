@@ -97,6 +97,7 @@ function configure() {
     echo ""
     echo "SRCDIR     := $(escape_for_make "$srcdir")"
     echo "BUILD_NAME := $(escape_for_make "$build_name")"
+    echo "SUBMAKE_JOBS = $(($(grep -c processor /proc/cpuinfo) * 2))"
 
     # ffmpeg?
     if [[ -n $arg_ffmpeg ]]; then
