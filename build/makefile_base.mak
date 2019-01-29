@@ -896,14 +896,40 @@ ffmpeg64: $(FFMPEG_CONFIGURE_FILES64)
 	+$(MAKE) -C $(FFMPEG_OBJ64)
 	+$(MAKE) -C $(FFMPEG_OBJ64) install
 	mkdir -pv $(DST_DIR)/lib64
-	cp -L $(TOOLS_DIR64)/lib/{libavcodec,libavutil,libswresample}* $(DST_DIR)/lib64
+ifeq ($(OSX),1)
+	# On OSX, use rpath to link to avoid issues locating the libs
+	for lib in $(abspath $(TOOLS_DIR64))/lib/{libavcodec,libavutil,libswresample}*.*.dylib; do \
+		name=$$(basename $$lib); \
+		install_name_tool -id @rpath/$$name $$lib; \
+		for dep_lib in $(TOOLS_DIR64)/lib/{libavcodec,libavutil,libswresample}*.*.dylib; do \
+			if [[ "$$lib" != "$$dep_lib" ]]; then \
+				echo >&2 "$$dep_lib: changing $$lib to @rpath/$$name"; \
+				install_name_tool -change "$$lib" "@rpath/$$name" "$$dep_lib"; \
+			fi; \
+		done; \
+	done
+endif
+	cp -L $(TOOLS_DIR64)/lib/{libavcodec,libavutil,libswresample}* $(DST_DIR)/lib64/
 
 ffmpeg32: SHELL = $(CONTAINER_SHELL32)
 ffmpeg32: $(FFMPEG_CONFIGURE_FILES32)
 	+$(MAKE) -C $(FFMPEG_OBJ32)
 	+$(MAKE) -C $(FFMPEG_OBJ32) install
 	mkdir -pv $(DST_DIR)/lib
-	cp -L $(TOOLS_DIR32)/lib/{libavcodec,libavutil,libswresample}* $(DST_DIR)/lib
+ifeq ($(OSX),1)
+	# On OSX, use rpath to link to avoid issues locating the libs
+	for lib in $(abspath $(TOOLS_DIR32))/lib/{libavcodec,libavutil,libswresample}*.*.dylib; do \
+		name=$$(basename $$lib); \
+		install_name_tool -id @rpath/$$name $$lib; \
+		for dep_lib in $(TOOLS_DIR32)/lib/{libavcodec,libavutil,libswresample}*.*.dylib; do \
+			if [[ "$$lib" != "$$dep_lib" ]]; then \
+				echo >&2 "$$dep_lib: changing $$lib to @rpath/$$name"; \
+				install_name_tool -change "$$lib" "@rpath/$$name" "$$dep_lib"; \
+			fi; \
+		done; \
+	done
+endif
+	cp -L $(TOOLS_DIR32)/lib/{libavcodec,libavutil,libswresample}* $(DST_DIR)/lib/
 
 endif # ifeq ($(WITH_FFMPEG),1)
 
@@ -963,6 +989,9 @@ $(FAUDIO_CONFIGURE_FILES64): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) | $(FAUDIO
 faudio32: SHELL = $(CONTAINER_SHELL32)
 faudio32: $(FAUDIO_CONFIGURE_FILES32)
 	ninja -C $(FAUDIO_OBJ32) install
+ifeq ($(OSX),1)
+	install_name_tool -change "$$(cd "$(TOOLS_DIR32)" && pwd -P)/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" $(TOOLS_DIR32)/lib/libFAudio.$(LIB_SUFFIX)
+endif
 	mkdir -p $(DST_DIR)/lib
 	cp -L $(TOOLS_DIR32)/lib/libFAudio* $(DST_DIR)/lib/
 	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libFAudio.$(LIB_SUFFIX)
@@ -971,6 +1000,9 @@ faudio32: $(FAUDIO_CONFIGURE_FILES32)
 faudio64: SHELL = $(CONTAINER_SHELL64)
 faudio64: $(FAUDIO_CONFIGURE_FILES64)
 	ninja -C $(FAUDIO_OBJ64) install
+ifeq ($(OSX),1)
+	install_name_tool -change "$$(cd "$(TOOLS_DIR64)" && pwd -P)/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" $(TOOLS_DIR64)/lib/libFAudio.$(LIB_SUFFIX)
+endif
 	mkdir -p $(DST_DIR)/lib64
 	cp -L $(TOOLS_DIR64)/lib/libFAudio* $(DST_DIR)/lib64/
 	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libFAudio.$(LIB_SUFFIX)
@@ -1172,7 +1204,11 @@ wine64-intermediate: $(WINE_CONFIGURE_FILES64)
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS)
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE_COMMON_MAKE_ARGS) install-lib
 	+$(MAKE) -C $(WINE_OBJ64) $(WINE64_MAKE_ARGS) install-lib install-dev
-	install_name_tool -change "$(abspath "$(TOOLS_DIR64)")/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$(DST_DIR)/lib64/wine/dinput.dll.so"
+ifeq ($(OSX),1)
+	# Fix SDL library paths
+	find $(DST_DIR)/lib64/wine -name dinput\*.dll.so -print0 | \
+		xargs -0 -n 1 install_name_tool -change "$$(cd "$(TOOLS_DIR64)" && pwd -P)/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib"
+endif
 	rm -f $(DST_DIR)/bin/{msiexec,notepad,regedit,regsvr32,wineboot,winecfg,wineconsole,winedbg,winefile,winemine,winepath}
 	rm -rf $(DST_DIR)/share/man/
 
@@ -1187,9 +1223,13 @@ wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE32_MAKE_ARGS) install-lib install-dev
 	mkdir -p $(DST_DIR)/{lib,bin}
 	cp -a $(WINE_DST32)/lib $(DST_DIR)/
-	install_name_tool -change "$(abspath "$(TOOLS_DIR32)")/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib" "$(DST_DIR)/lib/wine/dinput.dll.so"
+ifeq ($(OSX),1)
+	find $(DST_DIR)/lib/wine -name dinput\*.dll.so -print0 | \
+		xargs -0 -n 1 install_name_tool -change "$$(cd "$(TOOLS_DIR32)" && pwd -P)/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib"
+else
+	cp -a $(WINE_DST32)/bin/wine-preloader ../$(DST_DIR)/bin/
+endif
 	cp -a $(WINE_DST32)/bin/wine $(DST_DIR)/bin/
-	[ "x"$(OSX) = "x1" ] || cp -a ../$(WINE_DST32)/bin/wine-preloader ../$(DST_DIR)/bin/
 
 ##
 ## vrclient
