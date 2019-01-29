@@ -124,7 +124,6 @@ function configure() {
     echo ""
     echo "SRCDIR     := $(escape_for_make "$srcdir")"
     echo "BUILD_NAME := $(escape_for_make "$build_name")"
-    echo "SUBMAKE_JOBS = $(($(grep -c processor /proc/cpuinfo) * 2))"
     if [[ -n $OSX ]]; then
         echo "OSX := 1"
         if [[ -n "$macsdk" ]]; then
@@ -140,6 +139,9 @@ END
         if [[ -n $arg_force_dxvk ]]; then
             echo "NO_DXVK :="
         fi
+        echo "SUBMAKE_JOBS = $(($(sysctl -n hw.ncpu) * 2))"
+    else
+        echo "SUBMAKE_JOBS = $(($(grep -c processor /proc/cpuinfo) * 2))"
     fi
 
     # ffmpeg?
