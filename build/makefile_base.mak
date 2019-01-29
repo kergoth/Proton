@@ -310,8 +310,8 @@ LIBPNG_OUT32 := $(TOOLS_DIR32)/lib/libprotonpng16.dylib
 
 LIBJPEG := $(SRCDIR)/libjpeg-turbo
 LIBJPEGPROTON := ./syn-libjpeg
-LIBJPEG_OBJ := ./obj-libjpeg
-LIBJPEG_BUILT := $(LIBJPEG_OBJ)/lib/libjpeg.dylib
+LIBJPEG_OBJ32 := ./obj-libjpeg32
+LIBJPEG_OBJ64 := ./obj-libjpeg64
 LIBJPEG_OUT64 := $(TOOLS_DIR64)/lib/libprotonjpeg.dylib
 LIBJPEG_OUT32 := $(TOOLS_DIR32)/lib/libprotonjpeg.dylib
 
@@ -338,7 +338,8 @@ OBJ_DIRS := $(TOOLS_DIR32)        $(TOOLS_DIR64)        \
             $(DXVK_OBJ32)         $(DXVK_OBJ64)         \
             $(CMAKE_OBJ32)        $(CMAKE_OBJ64)        \
             $(LIBPNG_OBJ32)       $(LIBPNG_OBJ64)       \
-            $(LIBJPEG_OBJ)        $(LIBSDL_OBJ)         \
+            $(LIBJPEG_OBJ32)      $(LIBJPEG_OBJ64)      \
+            $(LIBSDL_OBJ)                               \
             $(MOLTENVK_OBJ)
 
 $(OBJ_DIRS):
@@ -623,13 +624,20 @@ $(LIBJPEGPROTON): $(LIBJPEGPROTON)/.created
 
 ## Create & configure object directory for libjpeg
 
-LIBJPEG_CONFIGURE_FILES := $(LIBJPEG_OBJ)/Makefile
+LIBJPEG_CONFIGURE_FILES32 := $(LIBJPEG_OBJ32)/Makefile
+LIBJPEG_CONFIGURE_FILES64 := $(LIBJPEG_OBJ64)/Makefile
 
-$(LIBJPEG_CONFIGURE_FILES): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ)
+# 64-bit configure
+$(LIBJPEG_CONFIGURE_FILES64): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ64)
 	cd $(dir $@) && \
-		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) \
-			CFLAGS="-arch x86_64 -arch i386 -O3 -g $(CFLAGS)" LDFLAGS="$(LDFLAGS)" \
-			ARCHFLAGS="-arch x86_64 -arch i386"
+		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+			CFLAGS="-O3 -g $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+
+# 32bit-configure
+$(LIBJPEG_CONFIGURE_FILES32): $(LIBJPEG_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBJPEGPROTON) | $(LIBJPEG_OBJ32)
+	cd $(dir $@) && \
+		$(abspath $(LIBJPEGPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
+			CFLAGS="-O3 -g -m32 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
 
 ## Libjpeg goals
 LIBJPEG_TARGETS = libjpeg libjpeg32 libjpeg64 libjpeg_configure libjpeg_configure32 libjpeg_configure64
@@ -639,12 +647,11 @@ GOAL_TARGETS_LIBS += libjpeg
 
 .PHONY: $(LIBJPEG_TARGETS)
 
-libjpeg_configure: $(LIBJPEG_CONFIGURE_FILES)
+libjpeg_configure: $(LIBJPEG_CONFIGURE_FILES32) $(LIBJPEG_CONFIGURE_FILES64)
 
-libjpeg_configure64: libjpeg_configure
+libjpeg_configure64: $(LIBJPEG_CONFIGURE_FILES64)
 
-libjpeg_configure32: libjpeg_configure
-
+libjpeg_configure32: $(LIBJPEG_CONFIGURE_FILES32)
 
 libjpeg: libjpeg32 libjpeg64
 
@@ -655,21 +662,19 @@ $(LIBJPEG_OUT64) libjpeg64: libjpeg64-intermediate
 
 $(LIBJPEG_OUT32) libjpeg32: libjpeg32-intermediate
 
-$(LIBJPEG_BUILT) libjpeg_compile: $(LIBJPEG_CONFIGURE_FILES)
-	$(MAKE) -C $(LIBJPEG_OBJ) LDFLAGS="-arch x86_64 -arch i386 $(LDFLAGS)"
-
-libjpeg64-intermediate: $(LIBJPEG_BUILT)
-	$(MAKE) -C $(LIBJPEG_OBJ) install
+libjpeg64-intermediate: $(LIBJPEG_CONFIGURE_FILES64)
+	$(MAKE) -C $(LIBJPEG_OBJ64)
+	$(MAKE) -C $(LIBJPEG_OBJ64) install
 	mv $(TOOLS_DIR64)/lib/lib{,proton}jpeg.dylib
-	mkdir -p $(DST_DIR)/lib64
 	cp $(LIBJPEG_OUT64) $(DST_DIR)/lib64
 	$(STRIP) $(DST_DIR)/lib64/libprotonjpeg.dylib
 
-libjpeg32-intermediate: $(LIBJPEG_BUILT)
-	$(MAKE) -C $(LIBJPEG_OBJ) prefix=$(abspath $(TOOLS_DIR32)) install
+libjpeg32-intermediate: $(LIBJPEG_CONFIGURE_FILES32)
+	$(MAKE) -C $(LIBJPEG_OBJ32)
+	$(MAKE) -C $(LIBJPEG_OBJ32) install
 	mv $(TOOLS_DIR32)/lib/lib{,proton}jpeg.dylib
-	mkdir -p $(DST_DIR)/lib
-	ln -sf ../lib64/libprotonjpeg.dylib $(DST_DIR)/lib/libprotonjpeg.dylib
+	cp $(LIBJPEG_OUT32) $(DST_DIR)/lib
+	$(STRIP) $(DST_DIR)/lib/libprotonjpeg.dylib
 
 endif # ifeq ($(OSX),1)
 
