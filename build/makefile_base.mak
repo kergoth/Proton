@@ -754,7 +754,7 @@ LIBSDL_CONFIGURE_FILES := $(LIBSDL_OBJ)/Makefile
 
 $(LIBSDL_CONFIGURE_FILES): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ)
 	cd $(dir $@) && \
-		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
+		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin --disable-static \
 			CFLAGS="-arch x86_64 -arch i386 -g -O2 $(CFLAGS)" LDFLAGS="-arch x86_64 -arch i386 $(LDFLAGS)"
 
 ## Libsdl goals
