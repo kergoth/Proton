@@ -80,6 +80,9 @@ SELECT_DOCKER_IMAGE :=
 ifneq ($(CONTAINER_SHELL32)$(CONTAINER_SHELL64),)
 	SUBMAKE_JOBS ?= 24
 	MAKE := make -j$(SUBMAKE_JOBS)
+else
+	CMAKE_BIN32 = cmake
+	CMAKE_BIN64 = cmake
 endif
 
 # Use default shell if no STEAMRT_ variables setup a container to invoke.  Commands will just run natively.
@@ -216,8 +219,8 @@ DXVK_OBJ64 := ./obj-dxvk64
 CMAKE := $(SRCDIR)/cmake
 CMAKE_OBJ32 := ./obj-cmake32
 CMAKE_OBJ64 := ./obj-cmake64
-CMAKE_BIN32 := $(CMAKE_OBJ32)/built/bin/cmake
-CMAKE_BIN64 := $(CMAKE_OBJ64)/built/bin/cmake
+CMAKE_BIN32 ?= $(abspath $(CMAKE_OBJ32))/built/bin/cmake
+CMAKE_BIN64 ?= $(abspath $(CMAKE_OBJ64))/built/bin/cmake
 
 FONTS := $(SRCDIR)/fonts
 FONTS_OBJ := ./obj-fonts
@@ -481,9 +484,12 @@ FAUDIO_CONFIGURE_FILES32 := $(FAUDIO_OBJ32)/Makefile
 FAUDIO_CONFIGURE_FILES64 := $(FAUDIO_OBJ64)/Makefile
 
 $(FAUDIO_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
-$(FAUDIO_CONFIGURE_FILES32): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BIN32) | $(FAUDIO_OBJ32)
+ifneq ($(CMAKE_BIN32),cmake)
+$(FAUDIO_CONFIGURE_FILES32): $(CMAKE_BIN32)
+endif
+$(FAUDIO_CONFIGURE_FILES32): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) | $(FAUDIO_OBJ32)
 	cd $(dir $@) && \
-		../$(CMAKE_BIN32) $(abspath $(FAUDIO)) \
+		$(CMAKE_BIN32) $(abspath $(FAUDIO)) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR32))" \
 			-DFFmpeg_INCLUDE_DIR="$(abspath $(TOOLS_DIR32))/include" \
 			$(FAUDIO_CMAKE_FLAGS) \
@@ -491,9 +497,12 @@ $(FAUDIO_CONFIGURE_FILES32): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BI
 			-DCMAKE_SHARED_LINKER_FLAGS="$(LDFLAGS)"
 
 $(FAUDIO_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
-$(FAUDIO_CONFIGURE_FILES64): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BIN64) | $(FAUDIO_OBJ64)
+ifneq ($(CMAKE_BIN64),cmake)
+$(FAUDIO_CONFIGURE_FILES64): $(CMAKE_BIN64)
+endif
+$(FAUDIO_CONFIGURE_FILES64): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) | $(FAUDIO_OBJ64)
 	cd $(dir $@) && \
-		../$(CMAKE_BIN64) $(abspath $(FAUDIO)) \
+		$(CMAKE_BIN64) $(abspath $(FAUDIO)) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR64))" \
 			-DFFmpeg_INCLUDE_DIR="$(abspath $(TOOLS_DIR64))/include" \
 			$(FAUDIO_CMAKE_FLAGS) \
@@ -808,7 +817,7 @@ vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKE
 ## cmake -- necessary for FAudio, not part of steam runtime
 ##
 
-# TODO Don't bother with this in native mode
+ifeq ($(SUBMAKE_JOBS),)
 
 ## Create & configure object directory for cmake
 
@@ -862,6 +871,8 @@ cmake32-intermediate: $(CMAKE_CONFIGURE_FILES32) $(filter $(MAKECMDGOALS),cmake3
 	+$(MAKE) -C $(CMAKE_OBJ32)
 	+$(MAKE) -C $(CMAKE_OBJ32) install
 	touch $(CMAKE_BIN32)
+
+endif # ifneq ($(SUBMAKE_JOBS),)
 
 ##
 ## dxvk
