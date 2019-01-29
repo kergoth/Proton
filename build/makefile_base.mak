@@ -160,6 +160,7 @@ SANITY_FLAGS   := -fwrapv -fno-strict-aliasing
 COMMON_FLAGS   := $(OPTIMIZE_FLAGS) $(SANITY_FLAGS)
 CFLAGS         += $(COMMON_FLAGS)
 CXXFLAGS       += $(COMMON_FLAGS)
+XCODEBUILD_FLAGS += CC=$(CC_QUOTED) CXX=$(CXX_QUOTED)
 
 # Use $(call QUOTE,$(VAR)) to flatten a list to a single element (for feeding to a shell)
 
@@ -714,11 +715,12 @@ $(MOLTENVK_OUT) moltenvk: moltenvk-intermediate
 # out as such.  We could run it in the symlink'd directory, but then we'd be fetching all of its dependencies per build,
 # when they are invariant.  This should still work decently with multiple builds, though perhaps not running them in
 # parallel.
+
 moltenvk-intermediate: $(MAKEFILE_DEP) $(MOLTENVKPROTON) | $(MOLTENVK_OBJ)
 	cd $(MOLTENVK) && ./fetchDependencies
 	mkdir -p $(MOLTENVK_OBJ)/Package
 	cd $(MOLTENVKPROTON) && xcodebuild -project MoltenVKPackaging.xcodeproj -scheme MoltenVK-macOS build -derivedDataPath $(abspath $(MOLTENVK_OBJ)) \
-		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) CC=$(CC_QUOTED) CXX=$(CXX_QUOTED)
+		BUILD_DIR=$(abspath $(MOLTENVK_OBJ)) $(XCODEBUILD_FLAGS)
 
 	mkdir -p $(TOOLS_DIR64)/include $(TOOLS_DIR64)/lib $(DST_DIR)/lib64
 	cp -a $(MOLTENVK_OBJ)/Release/MoltenVK.framework/Headers/* $(TOOLS_DIR64)/include/
