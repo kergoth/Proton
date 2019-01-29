@@ -316,7 +316,6 @@ LIBJPEG_OUT64 := $(TOOLS_DIR64)/lib/libprotonjpeg.dylib
 LIBJPEG_OUT32 := $(TOOLS_DIR32)/lib/libprotonjpeg.dylib
 
 LIBSDL := $(SRCDIR)/SDL-mirror
-LIBSDLPROTON := ./syn-libsdl
 LIBSDL_OBJ32 := ./obj-libsdl32
 LIBSDL_OBJ64 := ./obj-libsdl64
 LIBSDL_OUT64 := $(TOOLS_DIR64)/lib/libSDL2.dylib
@@ -736,34 +735,28 @@ endif # ifeq ($(OSX),1)
 
 ifeq ($(OSX),1) # currently only for OS X builds
 
-## Synthetic libsdl for autogen
-$(LIBSDLPROTON)/.created: $(LIBSDL) $(MAKEFILE_DEP) $(LIBSDL)/configure.in $(LIBSDL)/autogen.sh
-	rm -rf ./$(LIBSDLPROTON)
-	mkdir -p $(LIBSDLPROTON)/
-	cd $(LIBSDLPROTON)/ && \
-		ln -sfv ../$(LIBSDL)/* .
-	rm -f $(LIBSDLPROTON)/configure
-	cd $(LIBSDLPROTON) && ./autogen.sh
-	touch $(LIBSDLPROTON)/.created
-
-$(LIBSDLPROTON): $(LIBSDLPROTON)/.created
-
 ## Create & configure object directory for libsdl
 
-LIBSDL_CONFIGURE_FILES32 := $(LIBSDL_OBJ32)/Makefile
-LIBSDL_CONFIGURE_FILES64 := $(LIBSDL_OBJ64)/Makefile
+LIBSDL_CMAKE_FLAGS = -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR="lib" -DRPATH=ON
 
-# 64-bit configure
-$(LIBSDL_CONFIGURE_FILES64): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ64)
-	cd $(dir $@) && \
-		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR64)) --host x86_64-apple-darwin \
-			CFLAGS="-g -O2 $(CFLAGS)" LDFLAGS="$(LDFLAGS)"
+LIBSDL_CONFIGURE_FILES32 := $(LIBSDL_OBJ32)/build.ninja
+LIBSDL_CONFIGURE_FILES64 := $(LIBSDL_OBJ64)/build.ninja
 
-# 32bit-configure
-$(LIBSDL_CONFIGURE_FILES32): $(LIBSDL_AUTOGEN_FILES) $(MAKEFILE_DEP) $(LIBSDLPROTON) | $(LIBSDL_OBJ32)
+$(LIBSDL_CONFIGURE_FILES32): $(LIBSDL)/CMakeLists.txt $(MAKEFILE_DEP) | $(LIBSDL_OBJ32)
 	cd $(dir $@) && \
-		$(abspath $(LIBSDLPROTON)/configure) --prefix=$(abspath $(TOOLS_DIR32)) --host i686-apple-darwin \
-			CFLAGS="-m32 -g -O2 $(CFLAGS)" LDFLAGS="-m32 $(LDFLAGS)"
+		$(CMAKE_BIN32) $(abspath $(LIBSDL)) \
+			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR32))" \
+			$(LIBSDL_CMAKE_FLAGS) \
+			-DCMAKE_C_FLAGS="-m32 $(CFLAGS)" \
+			-DCMAKE_SHARED_LINKER_FLAGS="-m32 $(LDFLAGS)"
+
+$(LIBSDL_CONFIGURE_FILES64): $(LIBSDL)/CMakeLists.txt $(MAKEFILE_DEP) | $(LIBSDL_OBJ64)
+	cd $(dir $@) && \
+		$(CMAKE_BIN64) $(abspath $(LIBSDL)) \
+			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR64))" \
+			$(LIBSDL_CMAKE_FLAGS) \
+			-DCMAKE_C_FLAGS="$(CFLAGS)" \
+			-DCMAKE_SHARED_LINKER_FLAGS="$(LDFLAGS)"
 
 ## Libsdl goals
 LIBSDL_TARGETS = libsdl libsdl32 libsdl64 libsdl_configure libsdl_configure32 libsdl_configure64
@@ -789,24 +782,17 @@ $(LIBSDL_OUT64) libsdl64: libsdl64-intermediate
 $(LIBSDL_OUT32) libsdl32: libsdl32-intermediate
 
 libsdl64-intermediate: $(LIBSDL_CONFIGURE_FILES64)
-	$(MAKE) -C $(LIBSDL_OBJ64)
-	$(MAKE) -C $(LIBSDL_OBJ64) install-hdrs
-	$(MAKE) -C $(LIBSDL_OBJ64) install-lib
-	mkdir -p $(TOOLS_DIR64)/lib/pkgconfig
-	install -m 644 $(LIBSDL_OBJ64)/sdl2.pc $(TOOLS_DIR64)/lib/pkgconfig/sdl2.pc
+	ninja -C $(LIBSDL_OBJ64) install
 	mkdir -p $(DST_DIR)/lib64
 	cp $(LIBSDL_OUT64) $(DST_DIR)/lib64
 	$(STRIP) $(DST_DIR)/lib64/libSDL2.dylib
 
 libsdl32-intermediate: $(LIBSDL_CONFIGURE_FILES32)
-	$(MAKE) -C $(LIBSDL_OBJ32)
-	$(MAKE) -C $(LIBSDL_OBJ32) install-hdrs
-	$(MAKE) -C $(LIBSDL_OBJ32) install-lib
-	mkdir -p $(TOOLS_DIR32)/lib/pkgconfig
-	install -m 644 $(LIBSDL_OBJ32)/sdl2.pc $(TOOLS_DIR32)/lib/pkgconfig/sdl2.pc
+	ninja -C $(LIBSDL_OBJ32) install
 	mkdir -p $(DST_DIR)/lib
 	cp $(LIBSDL_OUT32) $(DST_DIR)/lib
 	$(STRIP) $(DST_DIR)/lib/libSDL2.dylib
+
 endif # ifeq ($(OSX),1)
 
 ##
@@ -946,7 +932,8 @@ ifneq ($(CMAKE_BIN32),cmake)
 $(FAUDIO_CONFIGURE_FILES32): $(CMAKE_BIN32)
 endif
 ifeq ($(OSX),1)
-$(FAUDIO_CONFIGURE_FILES32): export SDL2_DIR = $(abspath $(LIBSDL_OBJ32))
+# $(FAUDIO_CONFIGURE_FILES32): export SDL2_DIR = $(abspath $(LIBSDL_OBJ32))
+$(FAUDIO_CONFIGURE_FILES32): PATH := $(abspath $(LIBSDL_OBJ32)):$(PATH)
 endif
 $(FAUDIO_CONFIGURE_FILES32): $(FAUDIO)/CMakeLists.txt $(MAKEFILE_DEP) | $(FAUDIO_OBJ32)
 	cd $(dir $@) && \
