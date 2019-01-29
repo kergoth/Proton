@@ -723,6 +723,7 @@ wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 ## vrclient
 ##
 
+ifneq ($(NO_DXVK),1)
 ## Create & configure object directory for vrclient
 
 VRCLIENT_CONFIGURE_FILES32 := $(VRCLIENT_OBJ32)/Makefile
@@ -812,6 +813,8 @@ vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKE
 		mkdir -pv ../$(DST_DIR)/lib/wine/fakedlls && \
 		cp -a ../$(VRCLIENT_OBJ32)/vrclient.dll.so ../$(DST_DIR)/lib/wine/ && \
 		cp -a ../$(VRCLIENT_OBJ32)/vrclient.dll.fake ../$(DST_DIR)/lib/wine/fakedlls/vrclient.dll
+
+endif # ifneq ($(NO_DXVK),1)
 
 ##
 ## cmake -- necessary for FAudio, not part of steam runtime
