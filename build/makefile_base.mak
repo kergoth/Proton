@@ -73,16 +73,20 @@ else ifneq ($(STEAMRT32_MODE),)
 	foo := $(error Unrecognized STEAMRT32_MODE $(STEAMRT32_MODE))
 endif
 
+ifneq ($(CONTAINER_SHELL32)$(CONTAINER_SHELL64),)
+	USING_CONTAINERS := 1
+else
+	CMAKE_BIN32 = cmake
+	CMAKE_BIN64 = cmake
+endif
+
 SELECT_DOCKER_IMAGE :=
 
 # If we're using containers to sub-invoke the various builds, jobserver won't work, have some silly auto-jobs
 # controllable by SUBMAKE_JOBS.  Not ideal.
-ifneq ($(CONTAINER_SHELL32)$(CONTAINER_SHELL64),)
+ifneq ($(USING_CONTAINERS)$(SUBMAKE_JOBS),)
 	SUBMAKE_JOBS ?= 24
 	MAKE := make -j$(SUBMAKE_JOBS)
-else
-	CMAKE_BIN32 = cmake
-	CMAKE_BIN64 = cmake
 endif
 
 # Use default shell if no STEAMRT_ variables setup a container to invoke.  Commands will just run natively.
@@ -818,7 +822,7 @@ endif # ifneq ($(NO_DXVK),1)
 ## cmake -- necessary for FAudio, not part of steam runtime
 ##
 
-ifeq ($(SUBMAKE_JOBS),)
+ifneq ($(USING_CONTAINERS),)
 
 ## Create & configure object directory for cmake
 
