@@ -760,7 +760,7 @@ GOAL_TARGETS_LIBS += libsdl
 
 .PHONY: $(LIBSDL_TARGETS)
 
-libsdl_configure: $(LIBSDL_CONFIGURE_FILES32) $(LIBSDL_CONFIGURE_FILES64)
+libsdl_configure: $(LIBSDL_CONFIGURE_FILES)
 
 libsdl_configure64: libsdl_configure
 
