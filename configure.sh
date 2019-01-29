@@ -135,6 +135,12 @@ export CFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
 export CXXFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
 export LDFLAGS = -mmacosx-version-min=10.13 -Wl,-syslibroot,\$(SDKROOT)
 END
+            if xcodebuild -showsdks | grep -qw macosx10.13; then
+                echo "XCODEBUILD_FLAGS = -sdk macosx10.13 ARCHS='\$\$(ARCHS_STANDARD_32_64_BIT)'"
+            else
+                err "$macsdk exists, but is not available to xcodebuild"
+                err "MoltenVK may still build, but only for x86_64"
+            fi
         fi
         if [[ -n $arg_force_dxvk ]]; then
             echo "NO_DXVK :="
