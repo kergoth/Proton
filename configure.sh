@@ -136,8 +136,8 @@ export CXXFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
 export LDFLAGS = -mmacosx-version-min=10.13 -Wl,-syslibroot,\$(SDKROOT)
 END
         fi
-        if [[ -n $arg_force_dxvk ]]; then
-            echo "NO_DXVK :="
+        if [[ -z $arg_force_dxvk ]]; then
+            echo "NO_DXVK := 1"
         fi
         echo "SUBMAKE_JOBS = $(($(sysctl -n hw.ncpu) * 2))"
     else
