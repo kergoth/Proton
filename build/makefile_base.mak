@@ -1501,27 +1501,28 @@ FONT_TTFS = $(LIBERATION_SANS_REGULAR_TTF) $(LIBERATION_SANS_BOLD_TTF) \
 FONTS_SRC = $(FONT_TTFS:.ttf=.sfd)
 
 #The use of "Arial" here is for compatibility with programs that require that exact string. This font is not Arial.
-$(LIBERATION_SANS_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+$(LIBERATION_SANS_REGULAR_TTF): $(LIBERATION_SANS_REGULAR_TTF:.ttf=.sfd) $(FONTSCRIPT)
 	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "Arial" "Arial" "Arial"
 
 #The use of "Arial" here is for compatibility with programs that require that exact string. This font is not Arial.
-$(LIBERATION_SANS_BOLD_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+$(LIBERATION_SANS_BOLD_TTF): $(LIBERATION_SANS_BOLD_TTF:.ttf=.sfd) $(FONTSCRIPT)
 	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "Arial-Bold" "Arial" "Arial Bold"
 
 #The use of "Times New Roman" here is for compatibility with programs that require that exact string. This font is not Times New Roman.
-$(LIBERATION_SERIF_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+$(LIBERATION_SERIF_REGULAR_TTF): $(LIBERATION_SERIF_REGULAR_TTF:.ttf=.sfd) $(FONTSCRIPT)
 	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "TimesNewRoman" "Times New Roman" "Times New Roman"
 
 #The use of "Courier New" here is for compatibility with programs that require that exact string. This font is not Courier New.
-$(LIBERATION_MONO_REGULAR_TTF): $(FONTS_SRC) $(FONTSCRIPT)
+$(LIBERATION_MONO_REGULAR_TTF): $(LIBERATION_MONO_REGULAR_TTF:.ttf=.sfd) $(FONTSCRIPT)
 	patch $(@:.ttf=.sfd) $(FONTS)/patches/$(LIBERATION_MONO_REGULAR_SFD:.sfd=.patch)
 	$(FONTFORGE) -script $(FONTSCRIPT) $(@:.ttf=.sfd) "CourierNew" "Courier New" "Courier New"
 
-$(FONTS_OBJ):
-	mkdir -p $@
+$(FONTS_SRC): $(FONTS_OBJ)/.copied
 
-$(FONTS_SRC): $(FONTS_OBJ)
-	cp -n $(addprefix $(LIBERATION_SRCDIR)/, $(LIBERATION_SFDS)) $<
+$(FONTS_OBJ)/.copied: $(addprefix $(LIBERATION_SRCDIR)/, $(LIBERATION_SFDS))
+	mkdir -p $(FONTS_OBJ)
+	cp -n $^ $(FONTS_OBJ)/
+	touch $(FONTS_OBJ)/.copied
 
 fonts: $(LIBERATION_SANS_REGULAR_TTF) $(LIBERATION_SANS_BOLD_TTF) \
        $(LIBERATION_SERIF_REGULAR_TTF) $(LIBERATION_MONO_REGULAR_TTF) | $(FONTS_SRC)
