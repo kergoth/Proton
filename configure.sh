@@ -145,6 +145,11 @@ END
     if [[ -n $arg_ffmpeg ]]; then
       echo "WITH_FFMPEG := 1"
     fi
+    
+    # vkd3d?
+    if [[ -n $arg_vkd3d ]]; then
+      echo "WITH_VKD3D := 1"
+    fi
 
     # SteamRT
     echo "STEAMRT64_MODE  := $(escape_for_make "$steamrt64_type")"
@@ -169,6 +174,7 @@ arg_steamrt32=""
 arg_steamrt64=""
 arg_no_steamrt=""
 arg_ffmpeg=""
+arg_vkd3d=""
 arg_build_name=""
 arg_help=""
 arg_force_dxvk=""
@@ -211,6 +217,8 @@ function parse_args() {
       arg_ffmpeg=1
     elif [[ $arg = --osx-force-dxvk ]]; then
       arg_force_dxvk=1
+    elif [[ $arg = --with-vkd3d ]]; then
+      arg_vkd3d=1
     elif [[ $arg = --steam-runtime32 ]]; then
       val_used=1
       arg_steamrt32="$val"
@@ -266,6 +274,8 @@ usage() {
   "$1" ""
   "$1" "    --osx-force-dxvk     Attempt to build DXVK on OS X - not currently functioning,"
   "$1" "                         development use"
+  "$1" "    --with-vkd3d         Build vkd3d for dx12 support"
+  "$1" ""
   "$1" "  Steam Runtime"
   "$1" "    Proton builds that are to be installed & run under the steam client must be built with"
   "$1" "    the Steam Runtime SDK to ensure compatibility.  See README.md for more information."
