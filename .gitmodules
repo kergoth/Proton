@@ -1,7 +1,7 @@
 [submodule "wine"]
 	path = wine
 	url = https://github.com/kergoth/wine/
-	branch = macos-proton
+	branch = macos-proton-40
 [submodule "dxvk"]
 	path = dxvk
 	url = https://github.com/ValveSoftware/dxvk/
