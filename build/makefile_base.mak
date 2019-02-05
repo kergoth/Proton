@@ -591,6 +591,9 @@ $(FAUDIO_OBJ_FILES64): $(FAUDIO_CONFIGURE_FILES64)
 
 ifeq ($(WITH_VKD3D),1)
 
+WITH_VKD3D_32 ?= 1
+WITH_VKD3D_64 ?= 1
+
 ##
 ## SPIRV-tools
 ##
@@ -750,20 +753,20 @@ $(VKD3D_CONFIGURE_FILES32): $(VKD3D)/configure $(MAKEFILE_DEP) $(WIDL_BIN32) spi
 			--with-spirv-tools
 
 ## vkd3d goals
-VKD3D_TARGETS = vkd3d vkd3d_configure vkd3d32 vkd3d64 vkd3d_configure32 vkd3d_configure64
+VKD3D_TARGETS = vkd3d vkd3d_configure $(if $(WITH_VKD3D_32),vkd3d32 vkd3d_configure32) $(if $(WITH_VKD3D_64),vkd3d64 vkd3d_configure64)
 
 ALL_TARGETS += $(VKD3D_TARGETS)
 GOAL_TARGETS_LIBS += vkd3d
 
 .PHONY: $(VKD3D_TARGETS)
 
-vkd3d_configure: $(VKD3D_CONFIGURE_FILES32) $(VKD3D_CONFIGURE_FILES64)
+vkd3d_configure: $(if $(WITH_VKD3D_32),$(VKD3D_CONFIGURE_FILES32),) $(if $(WITH_VKD3D_64),$(VKD3D_CONFIGURE_FILES64),)
 
 vkd3d_configure64: $(VKD3D_CONFIGURE_FILES64)
 
 vkd3d_configure32: $(VKD3D_CONFIGURE_FILES32)
 
-vkd3d: vkd3d32 vkd3d64
+vkd3d: $(if $(WITH_VKD3D_32),vkd3d32,) $(if $(WITH_VKD3D_64),vkd3d64,)
 
 vkd3d64: SHELL = $(CONTAINER_SHELL64)
 vkd3d64: $(VKD3D_CONFIGURE_FILES64)
@@ -902,7 +905,7 @@ WINE32_MAKE_ARGS := \
 
 # 64bit-configure
 $(WINE_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
-$(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) $(FAUDIO_OBJ_FILES64) $(ifeq ($(WITH_VKD3D),1),vkd3d64,) | $(WINE_OBJ64)
+$(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) $(FAUDIO_OBJ_FILES64) $(if $(WITH_VKD3D_64),vkd3d64,) | $(WINE_OBJ64)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
 		CFLAGS="-I$(abspath $(TOOLS_DIR64))/include -I$(abspath $(SRCDIR))/contrib/include -g $(CFLAGS)" \
@@ -917,7 +920,7 @@ $(WINE_CONFIGURE_FILES64): $(MAKEFILE_DEP) $(FAUDIO_OBJ_FILES64) $(ifeq ($(WITH_
 
 # 32-bit configure
 $(WINE_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
-$(WINE_CONFIGURE_FILES32): $(MAKEFILE_DEP) $(FAUDIO_OBJ_FILES32) $(ifeq ($(WITH_VKD3D),1),vkd3d32,) | $(WINE_OBJ32) $(WINE_ORDER_DEPS32)
+$(WINE_CONFIGURE_FILES32): $(MAKEFILE_DEP) $(FAUDIO_OBJ_FILES32) $(if $(WITH_VKD3D_32),vkd3d32,) | $(WINE_OBJ32) $(WINE_ORDER_DEPS32)
 	cd $(dir $@) && \
 		STRIP=$(STRIP_QUOTED) \
 		CFLAGS="-I$(abspath $(TOOLS_DIR32))/include -I$(abspath $(SRCDIR))/contrib/include -g $(CFLAGS)" \
