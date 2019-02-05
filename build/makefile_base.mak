@@ -773,14 +773,14 @@ vkd3d64: $(VKD3D_CONFIGURE_FILES64)
 	+$(MAKE) -C $(VKD3D_OBJ64)
 	+$(MAKE) -C $(VKD3D_OBJ64) install
 	mkdir -pv $(DST_DIR)/lib64
-	cp -a $(TOOLS_DIR64)/lib/{libvkd3d.$(LIB_SUFFIX),libvkd3d-shader.$(LIB_SUFFIX)}* $(DST_DIR)/lib64
+	cp -a $(TOOLS_DIR64)/lib/{libvkd3d.*$(LIB_SUFFIX)*,libvkd3d-shader.*$(LIB_SUFFIX)*} $(DST_DIR)/lib64
 
 vkd3d32: SHELL = $(CONTAINER_SHELL32)
 vkd3d32: $(VKD3D_CONFIGURE_FILES32)
 	+$(MAKE) -C $(VKD3D_OBJ32)
 	+$(MAKE) -C $(VKD3D_OBJ32) install
 	mkdir -pv $(DST_DIR)/lib
-	cp -a $(TOOLS_DIR32)/lib/{libvkd3d.$(LIB_SUFFIX),libvkd3d-shader.$(LIB_SUFFIX)}* $(DST_DIR)/lib
+	cp -a $(TOOLS_DIR32)/lib/{libvkd3d.*$(LIB_SUFFIX)*,libvkd3d-shader.*$(LIB_SUFFIX)*} $(DST_DIR)/lib
 
 endif # ifeq ($(WITH_VKD3D),1)
 
