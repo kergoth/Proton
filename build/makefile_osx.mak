@@ -59,13 +59,13 @@ LICENSE = $(ABS_SRCDIR)/dist.LICENSE.osx
 STRIP = strip -x
 LIB_SUFFIX = dylib
 WINE32_AUTOCONF = --without-x \
-	              ac_cv_lib_soname_freetype=$(FREETYPE_SONAME) \
-	              ac_cv_lib_soname_png=$(LIBPNG_SONAME) \
-	              ac_cv_lib_soname_jpeg=$(LIBJPEG_SONAME)
+                  ac_cv_lib_soname_freetype=$(FREETYPE_SONAME) \
+                  ac_cv_lib_soname_png=$(LIBPNG_SONAME) \
+                  ac_cv_lib_soname_jpeg=$(LIBJPEG_SONAME)
 WINE64_AUTOCONF = --without-x \
-	              ac_cv_lib_soname_freetype=$(FREETYPE_SONAME) \
-	              ac_cv_lib_soname_png=$(LIBPNG_SONAME) \
-	              ac_cv_lib_soname_jpeg=$(LIBJPEG_SONAME)
+                  ac_cv_lib_soname_freetype=$(FREETYPE_SONAME) \
+                  ac_cv_lib_soname_png=$(LIBPNG_SONAME) \
+                  ac_cv_lib_soname_jpeg=$(LIBJPEG_SONAME)
 
 XML2_CFLAGS      := $(xml2-config --cflags)
 XML2_LIBS        := $(xml2-config --libs)
@@ -92,9 +92,9 @@ FREETYPE_CONFIGURE_FILES32 = $(FREETYPE_OBJ32)/build.ninja
 FREETYPE_CONFIGURE_FILES64 = $(FREETYPE_OBJ64)/build.ninja
 FREETYPE_SRC_FIXED = $(FREETYPE)/.fixed
 FREETYPE_CMAKE_FLAGS = $(CMAKE_FLAGS) \
-	           -DWITH_PNG=OFF \
-	           -DWITH_HarfBuzz=OFF \
-	           -DBUILD_SHARED_LIBS:BOOL=true
+               -DWITH_PNG=OFF \
+               -DWITH_HarfBuzz=OFF \
+               -DBUILD_SHARED_LIBS:BOOL=true
 
 $(FREETYPE_SRC_FIXED):
 	sed -i -ebak '/protonfreetype/d' $(FREETYPE)/CMakeLists.txt
@@ -308,6 +308,8 @@ $(MOLTENVK_OUT): $(MOLTENVKPROTON)/.created
 	mkdir -p $(ABS_TOOLS_DIR64)/include $(ABS_TOOLS_DIR64)/lib $(DST_DIR)/lib64
 	cp -a $(MOLTENVK_OBJ)/Release/MoltenVK.framework/Headers/* $(ABS_TOOLS_DIR64)/include/
 	cp -a $(MOLTENVK_OBJ)/Release/libMoltenVK.$(LIB_SUFFIX) $(ABS_TOOLS_DIR64)/lib/
+	cp -a $(MOLTENVK_OBJ)/Release/MoltenVK.framework/Headers/* $(ABS_TOOLS_DIR32)/include/
+	cp -a $(MOLTENVK_OBJ)/Release/libMoltenVK.$(LIB_SUFFIX) $(ABS_TOOLS_DIR32)/lib/
 	cp -a $(MOLTENVK_OBJ)/Release/libMoltenVK.$(LIB_SUFFIX) $(DST_DIR)/lib64/
 
 ##
@@ -384,6 +386,8 @@ $(WINE_CONFIGURE_FILES32): export FREETYPE_LIBS = $(FREETYPE32_LIBS)
 # Additional deps for the macOS build
 $(FAUDIO_CONFIGURE_FILES64): $(LIBSDL_OUT64)
 $(FAUDIO_CONFIGURE_FILES32): $(LIBSDL_OUT32)
+$(VKD3D_CONFIGURE_FILES32): $(MOLTENVK_OUT)
+$(VKD3D_CONFIGURE_FILES64): $(MOLTENVK_OUT)
 
 WINE_OSX_DEPS64 = $(FREETYPE_OUT64) $(LIBPNG_OUT64) $(LIBJPEG_OUT64) $(LIBSDL_OUT64) $(MOLTENVK_OUT)
 WINE_OSX_DEPS32 = $(FREETYPE_OUT32) $(LIBPNG_OUT32) $(LIBJPEG_OUT32) $(LIBSDL_OUT32) $(MOLTENVK_OUT)
@@ -448,7 +452,7 @@ $(WINE_BUILDTOOLS64) $(WINE_OUT) wine64: $(ABS_TOOLS_DIR64)/.wine-rpath
 $(ABS_TOOLS_DIR64)/.wine-rpath: wine64-intermediate
 	# Fix SDL library paths
 	find $(DST_DIR)/lib64/wine -name dinput\*.dll.so -print0 | \
-		xargs -0 -n 1 install_name_tool -change "$(ABS_TOOLS_DIR64)/lib/libSDL2-2.0.0.$(LIB_SUFFIX)" "@rpath/libSDL2.$(LIB_SUFFIX)"
+	    xargs -0 -n 1 install_name_tool -change "$(ABS_TOOLS_DIR64)/lib/libSDL2-2.0.0.$(LIB_SUFFIX)" "@rpath/libSDL2.$(LIB_SUFFIX)"
 	touch $@
 
 $(WINE_BUILDTOOLS32) wine32: $(ABS_TOOLS_DIR32)/.wine-rpath
@@ -456,6 +460,6 @@ $(WINE_BUILDTOOLS32) wine32: $(ABS_TOOLS_DIR32)/.wine-rpath
 $(ABS_TOOLS_DIR32)/.wine-rpath: wine32-intermediate
 	# Fix SDL library paths
 	find $(DST_DIR)/lib/wine -name dinput\*.dll.so -print0 | \
-		xargs -0 -n 1 install_name_tool -change "$(ABS_TOOLS_DIR32)/lib/libSDL2-2.0.0.$(LIB_SUFFIX)" "@rpath/libSDL2.$(LIB_SUFFIX)"
+	    xargs -0 -n 1 install_name_tool -change "$(ABS_TOOLS_DIR32)/lib/libSDL2-2.0.0.$(LIB_SUFFIX)" "@rpath/libSDL2.$(LIB_SUFFIX)"
 	touch $@
 

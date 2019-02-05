@@ -595,7 +595,8 @@ ifeq ($(WITH_VKD3D),1)
 ## SPIRV-tools
 ##
 
-SPIRV_TOOLS_CMAKE_FLAGS = -DCMAKE_BUILD_TYPE=Release \
+SPIRV_TOOLS_CMAKE_FLAGS = -GNinja \
+	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_INSTALL_LIBDIR="lib" \
 	-DSPIRV_WERROR=OFF \
 	-DSPIRV_SKIP_EXECUTABLES=ON \
@@ -613,22 +614,27 @@ spirv-tools: spirv-tools32 spirv-tools64
 
 SPIRV_TOOLS_CONFIGURE_FILES32 := $(SPIRV_TOOLS_OBJ32)/Makefile
 SPIRV_TOOLS_CONFIGURE_FILES64 := $(SPIRV_TOOLS_OBJ64)/Makefile
-
 $(SPIRV_TOOLS_CONFIGURE_FILES32): SHELL = $(CONTAINER_SHELL32)
-$(SPIRV_TOOLS_CONFIGURE_FILES32): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BIN32) | $(SPIRV_TOOLS_OBJ32)
+ifneq ($(CMAKE_BIN32),cmake)
+$(SPIRV_TOOLS_CONFIGURE_FILES32): $(CMAKE_BIN32)
+endif
+$(SPIRV_TOOLS_CONFIGURE_FILES32): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) | $(SPIRV_TOOLS_OBJ32)
 
 	cd $(dir $@) && \
-		../$(CMAKE_BIN32) $(abspath $(SPIRV_TOOLS)) \
+		$(CMAKE_BIN32) $(abspath $(SPIRV_TOOLS)) \
 			$(SPIRV_TOOLS_CMAKE_FLAGS) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR32))" \
 			-DCMAKE_C_FLAGS="-m32 -g $(COMMON_FLAGS)" \
 			-DCMAKE_CXX_FLAGS="-m32 -g $(COMMON_FLAGS)"
 
 $(SPIRV_TOOLS_CONFIGURE_FILES64): SHELL = $(CONTAINER_SHELL64)
-$(SPIRV_TOOLS_CONFIGURE_FILES64): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) $(CMAKE_BIN64) | $(SPIRV_TOOLS_OBJ64)
+ifneq ($(CMAKE_BIN32),cmake)
+$(SPIRV_TOOLS_CONFIGURE_FILES64): $(CMAKE_BIN64)
+endif
+$(SPIRV_TOOLS_CONFIGURE_FILES64): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) | $(SPIRV_TOOLS_OBJ64)
 
 	cd $(dir $@) && \
-		../$(CMAKE_BIN64) $(abspath $(SPIRV_TOOLS)) \
+		$(CMAKE_BIN64) $(abspath $(SPIRV_TOOLS)) \
 			$(SPIRV_TOOLS_CMAKE_FLAGS) \
 			-DCMAKE_INSTALL_PREFIX="$(abspath $(TOOLS_DIR64))" \
 			-DCMAKE_C_FLAGS="-g $(COMMON_FLAGS)" \
@@ -636,21 +642,19 @@ $(SPIRV_TOOLS_CONFIGURE_FILES64): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) 
 
 spirv-tools32: SHELL = $(CONTAINER_SHELL32)
 spirv-tools32: $(SPIRV_TOOLS_CONFIGURE_FILES32)
-	+$(MAKE) -C $(SPIRV_TOOLS_OBJ32) VERBOSE=1
-	+$(MAKE) -C $(SPIRV_TOOLS_OBJ32) install VERBOSE=1
-	sed -i 's/^\(Libs: .*\)$$/\1 -lrt/' $(TOOLS_DIR32)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
+	ninja -C $(SPIRV_TOOLS_OBJ32) install
+	sed -i -e 's#^\(Libs: .*\)$$#\1 -lrt#' $(TOOLS_DIR32)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
 	mkdir -p $(DST_DIR)/lib
-	cp -a $(TOOLS_DIR32)/lib/libSPIRV-Tools-shared.so* $(DST_DIR)/lib/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libSPIRV-Tools-shared.so*
+	cp -a $(TOOLS_DIR32)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)* $(DST_DIR)/lib/
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)*
 
 spirv-tools64: SHELL = $(CONTAINER_SHELL64)
 spirv-tools64: $(SPIRV_TOOLS_CONFIGURE_FILES64)
-	+$(MAKE) -C $(SPIRV_TOOLS_OBJ64) VERBOSE=1
-	+$(MAKE) -C $(SPIRV_TOOLS_OBJ64) install VERBOSE=1
-	sed -i 's/^\(Libs: .*\)$$/\1 -lrt/' $(TOOLS_DIR64)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
+	ninja -C $(SPIRV_TOOLS_OBJ64) install
+	sed -i -e 's#^\(Libs: .*\)$$#\1 -lrt#' $(TOOLS_DIR64)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
 	mkdir -p $(DST_DIR)/lib64
-	cp -a $(TOOLS_DIR64)/lib/libSPIRV-Tools-shared.so* $(DST_DIR)/lib64/
-	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libSPIRV-Tools-shared.so*
+	cp -a $(TOOLS_DIR64)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)* $(DST_DIR)/lib64/
+	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libSPIRV-Tools-shared.$(LIB_SUFFIX)*
 
 ##
 ## widl
@@ -667,6 +671,7 @@ $(WIDL_CONFIGURE_FILES64): $(MAKEFILE_DEP) | $(WIDL_OBJ64)
 		CXX=$(CXX_QUOTED) \
 		../$(WIDL)/configure \
 			--without-curses \
+			--without-freetype \
 			--enable-win64 --disable-tests
 
 # 32-bit configure
@@ -677,6 +682,7 @@ $(WIDL_CONFIGURE_FILES32): $(MAKEFILE_DEP) | $(WIDL_OBJ32)
 		CXX=$(CXX_QUOTED) \
 		../$(WIDL)/configure \
 			--without-curses \
+			--without-freetype \
 			--disable-tests
 
 WIDL_TARGETS = widl widl_configure widl32 widl64 widl_configure32 widl_configure64
@@ -723,7 +729,8 @@ $(VKD3D_CONFIGURE_FILES64): $(VKD3D)/configure $(MAKEFILE_DEP) $(WIDL_BIN64) spi
 		cd $(dir $@) && \
 		WIDL="$(abspath $(WIDL_BIN64))" \
 		CC="$(CC_QUOTED)" \
-		CFLAGS="-I$(abspath $(SRCDIR))/vulkan-headers/include -I$(abspath $(SRCDIR))/spirv-headers/include -g $(COMMON_FLAGS)" \
+		CFLAGS="-I$(abspath $(SRCDIR))/vulkan-headers/include -I$(abspath $(SRCDIR))/spirv-headers/include -I$(abspath $(TOOLS_DIR64))/include -g $(COMMON_FLAGS) $(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS) -L$(abspath $(TOOLS_DIR64))/lib" \
 		PKG_CONFIG_PATH="$(abspath $(TOOLS_DIR64))/lib/pkgconfig" \
 		$(abspath $(VKD3D))/configure \
 			--prefix="$(abspath $(TOOLS_DIR64))" \
@@ -736,8 +743,8 @@ $(VKD3D_CONFIGURE_FILES32): $(VKD3D)/configure $(MAKEFILE_DEP) $(WIDL_BIN32) spi
 		cd $(dir $@) && \
 		WIDL="$(abspath $(WIDL_BIN32))" \
 		CC="$(CC_QUOTED)" \
-		CFLAGS="-I$(abspath $(SRCDIR))/vulkan-headers/include -I$(abspath $(SRCDIR))/spirv-headers/include -m32 -g $(COMMON_FLAGS)" \
-		LDFLAGS="-m32" \
+		CFLAGS="-I$(abspath $(SRCDIR))/vulkan-headers/include -I$(abspath $(SRCDIR))/spirv-headers/include -I$(abspath $(TOOLS_DIR32))/include -m32 -g $(COMMON_FLAGS) $(CFLAGS)" \
+		LDFLAGS="-m32 $(LDFLAGS) -L$(abspath $(TOOLS_DIR32))/lib" \
 		PKG_CONFIG_PATH="$(abspath $(TOOLS_DIR32))/lib/pkgconfig" \
 		$(abspath $(VKD3D))/configure \
 			--prefix="$(abspath $(TOOLS_DIR32))" \
@@ -765,14 +772,14 @@ vkd3d64: $(VKD3D_CONFIGURE_FILES64)
 	+$(MAKE) -C $(VKD3D_OBJ64)
 	+$(MAKE) -C $(VKD3D_OBJ64) install
 	mkdir -pv $(DST_DIR)/lib64
-	cp -a $(TOOLS_DIR64)/lib/{libvkd3d.so,libvkd3d-shader.so}* $(DST_DIR)/lib64
+	cp -a $(TOOLS_DIR64)/lib/{libvkd3d.$(LIB_SUFFIX),libvkd3d-shader.$(LIB_SUFFIX)}* $(DST_DIR)/lib64
 
 vkd3d32: SHELL = $(CONTAINER_SHELL32)
 vkd3d32: $(VKD3D_CONFIGURE_FILES32)
 	+$(MAKE) -C $(VKD3D_OBJ32)
 	+$(MAKE) -C $(VKD3D_OBJ32) install
 	mkdir -pv $(DST_DIR)/lib
-	cp -a $(TOOLS_DIR32)/lib/{libvkd3d.so,libvkd3d-shader.so}* $(DST_DIR)/lib
+	cp -a $(TOOLS_DIR32)/lib/{libvkd3d.$(LIB_SUFFIX),libvkd3d-shader.$(LIB_SUFFIX)}* $(DST_DIR)/lib
 
 endif # ifeq ($(WITH_VKD3D),1)
 
@@ -1138,7 +1145,7 @@ cmake32-intermediate: $(CMAKE_CONFIGURE_FILES32) $(filter $(MAKECMDGOALS),cmake3
 	+$(MAKE) -C $(CMAKE_OBJ32) install
 	touch $(CMAKE_BIN32)
 
-endif # ifneq ($(SUBMAKE_JOBS),)
+endif # ifneq ($(USING_CONTAINERS),)
 
 ##
 ## dxvk
