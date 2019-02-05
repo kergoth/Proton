@@ -126,6 +126,9 @@ function configure() {
     echo "BUILD_NAME := $(escape_for_make "$build_name")"
     if [[ -n $OSX ]]; then
         echo "OSX := 1"
+        if [[ -n $arg_vkd3d ]]; then
+            echo "WITH_VKD3D_32 :="
+        fi
         if [[ -n "$macsdk" ]]; then
             # When building on macOS 10.14, use the 10.13 SDK
             cat <<END
