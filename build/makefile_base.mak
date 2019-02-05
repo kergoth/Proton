@@ -643,7 +643,6 @@ $(SPIRV_TOOLS_CONFIGURE_FILES64): $(SPIRV_TOOLS)/CMakeLists.txt $(MAKEFILE_DEP) 
 spirv-tools32: SHELL = $(CONTAINER_SHELL32)
 spirv-tools32: $(SPIRV_TOOLS_CONFIGURE_FILES32)
 	ninja -C $(SPIRV_TOOLS_OBJ32) install
-	sed -i -e 's#^\(Libs: .*\)$$#\1 -lrt#' $(TOOLS_DIR32)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
 	mkdir -p $(DST_DIR)/lib
 	cp -a $(TOOLS_DIR32)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)* $(DST_DIR)/lib/
 	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)*
@@ -651,7 +650,6 @@ spirv-tools32: $(SPIRV_TOOLS_CONFIGURE_FILES32)
 spirv-tools64: SHELL = $(CONTAINER_SHELL64)
 spirv-tools64: $(SPIRV_TOOLS_CONFIGURE_FILES64)
 	ninja -C $(SPIRV_TOOLS_OBJ64) install
-	sed -i -e 's#^\(Libs: .*\)$$#\1 -lrt#' $(TOOLS_DIR64)/lib/pkgconfig/SPIRV-Tools-shared.pc # add -lrt on < glibc-2.17
 	mkdir -p $(DST_DIR)/lib64
 	cp -a $(TOOLS_DIR64)/lib/libSPIRV-Tools-shared.$(LIB_SUFFIX)* $(DST_DIR)/lib64/
 	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib64/libSPIRV-Tools-shared.$(LIB_SUFFIX)*
