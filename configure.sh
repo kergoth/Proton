@@ -141,6 +141,7 @@ END
         fi
         if [[ -z $arg_force_dxvk ]]; then
             echo "NO_DXVK := 1"
+            echo "WITH_DXVK_32 :="
         fi
     fi
 
