@@ -1158,6 +1158,9 @@ endif # ifneq ($(USING_CONTAINERS),)
 
 ifneq ($(NO_DXVK),1) # May be disabled by configure
 
+WITH_DXVK_32 ?= 1
+WITH_DXVK_64 ?= 1
+
 DXVK_CONFIGURE_FILES32 := $(DXVK_OBJ32)/build.ninja
 DXVK_CONFIGURE_FILES64 := $(DXVK_OBJ64)/build.ninja
 
@@ -1191,20 +1194,20 @@ $(DXVK_CONFIGURE_FILES32): $(MAKEFILE_DEP) $(DXVK)/build-win32.txt | $(DXVK_OBJ3
 		meson --prefix="$(abspath $(DXVK_OBJ32))" --cross-file proton-build-win32.txt --strip --buildtype=release "$(abspath $(DXVK_OBJ32))"
 
 ## dxvk goals
-DXVK_TARGETS = dxvk dxvk_configure dxvk32 dxvk64 dxvk_configure32 dxvk_configure64
+DXVK_TARGETS = dxvk dxvk_configure $(if $(WITH_DXVK_32),dxvk32 dxvk_configure32) $(if $(WITH_DXVK_64),dxvk64 dxvk_configure64)
 
 ALL_TARGETS += $(DXVK_TARGETS)
 GOAL_TARGETS_LIBS += dxvk
 
 .PHONY: $(DXVK_TARGETS)
 
-dxvk_configure: $(DXVK_CONFIGURE_FILES32) $(DXVK_CONFIGURE_FILES64)
+dxvk_configure: $(if $(WITH_DXVK_32),$(DXVK_CONFIGURE_FILES32),) $(if $(WITH_DXVK_64),$(DXVK_CONFIGURE_FILES64),)
 
 dxvk_configure64: $(DXVK_CONFIGURE_FILES64)
 
 dxvk_configure32: $(DXVK_CONFIGURE_FILES32)
 
-dxvk: dxvk32 dxvk64
+dxvk: $(if $(WITH_DXVK_32),dxvk32,) $(if $(WITH_DXVK_64),dxvk64,)
 
 dxvk64: $(DXVK_CONFIGURE_FILES64)
 	env PATH="$(abspath $(SRCDIR))/glslang/bin/:$(PATH)" ninja -C "$(DXVK_OBJ64)" install
