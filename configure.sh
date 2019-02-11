@@ -132,11 +132,10 @@ function configure() {
         if [[ -n "$macsdk" ]]; then
             # When building on macOS 10.14, use the 10.13 SDK
             cat <<END
-export MACOSX_DEPLOYMENT_TARGET = 10.13
 export SDKROOT = $macsdk/MacOSX10.13.sdk
-export CFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
-export CXXFLAGS = -mmacosx-version-min=10.13 -isysroot \$(SDKROOT)
-export LDFLAGS = -mmacosx-version-min=10.13 -Wl,-syslibroot,\$(SDKROOT)
+export CFLAGS = -isysroot \$(SDKROOT)
+export CXXFLAGS = \$(CFLAGS)
+export LDFLAGS = -Wl,-syslibroot,\$(SDKROOT)
 END
         fi
         if [[ -z $arg_force_dxvk ]]; then
