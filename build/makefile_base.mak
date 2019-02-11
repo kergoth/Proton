@@ -1063,7 +1063,7 @@ vrclient: vrclient32 vrclient64
 
 vrclient64: SHELL = $(CONTAINER_SHELL64)
 vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env CXXFLAGS="-Wno-attributes -std=c++0x $(CXXFLAGS) -g" CFLAGS="$(CFLAGS) -g" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
+	+env CXXFLAGS="-Wno-attributes -std=c++0x $(CXXFLAGS) -g -I$(abspath $(SRCDIR))/vulkan-headers/include" CFLAGS="$(CFLAGS) -g -I$(abspath $(SRCDIR))/vulkan-headers/include" PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ64)
 	cd $(VRCLIENT_OBJ64) && \
 		PATH="$(abspath $(TOOLS_DIR64))/bin:$(PATH)" \
@@ -1075,7 +1075,7 @@ vrclient64: $(VRCLIENT_CONFIGURE_FILES64) | $(WINE_BUILDTOOLS64) $(filter $(MAKE
 
 vrclient32: SHELL = $(CONTAINER_SHELL32)
 vrclient32: $(VRCLIENT_CONFIGURE_FILES32) | $(WINE_BUILDTOOLS32) $(filter $(MAKECMDGOALS),wine64 wine32 wine)
-	+env LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(CXXFLAGS) -g" CFLAGS="-m32 $(CFLAGS) -g" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
+	+env LDFLAGS="-m32" CXXFLAGS="-m32 -Wno-attributes -std=c++0x $(CXXFLAGS) -g -I$(abspath $(SRCDIR))/vulkan-headers/include" CFLAGS="-m32 $(CFLAGS) -g -I$(abspath $(SRCDIR))/vulkan-headers/include" PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
 		$(MAKE) -C $(VRCLIENT_OBJ32)
 	cd $(VRCLIENT_OBJ32) && \
 		PATH="$(abspath $(TOOLS_DIR32))/bin:$(PATH)" \
