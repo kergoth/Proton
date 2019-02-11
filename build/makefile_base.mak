@@ -980,14 +980,7 @@ wine32-intermediate: $(WINE_CONFIGURE_FILES32)
 	+$(MAKE) -C $(WINE_OBJ32) $(WINE32_MAKE_ARGS) install-lib install-dev
 	mkdir -p $(DST_DIR)/{lib,bin}
 	cp -a $(WINE_DST32)/lib $(DST_DIR)/
-# ifeq ($(OSX),1)
-# 	find $(DST_DIR)/lib/wine -name dinput\*.dll.so -print0 | \
-# 		xargs -0 -n 1 install_name_tool -change "$$(cd "$(TOOLS_DIR32)" && pwd -P)/lib/libSDL2-2.0.0.dylib" "@rpath/libSDL2.dylib"
-# else
-	# cp -a $(WINE_DST32)/bin/wine-preloader ../$(DST_DIR)/bin/
-# endif
-	[ ! -e $(WINE_DST32)/bin/wine-preloader ] || \
-	    cp -a $(WINE_DST32)/bin/wine-preloader ../$(DST_DIR)/bin/
+	cp -a $(WINE_DST32)/bin/wine-preloader $(DST_DIR)/bin/
 	cp -a $(WINE_DST32)/bin/wine $(DST_DIR)/bin/
 
 ##
