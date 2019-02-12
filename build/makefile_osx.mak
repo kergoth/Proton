@@ -23,6 +23,7 @@ ABS_TOOLS_DIR64 := $(abspath $(TOOLS_DIR64))
 
 FREETYPE_SONAME = libprotonfreetype.$(LIB_SUFFIX)
 FREETYPE = $(ABS_SRCDIR)/freetype2
+FREETYPEPROTON = $(OBJDIR)/syn-freetype
 FREETYPE_OBJ32 = $(OBJDIR)/obj-freetype32
 FREETYPE_OBJ64 = $(OBJDIR)/obj-freetype64
 FREETYPE_OUT64 = $(ABS_TOOLS_DIR64)/lib/$(FREETYPE_SONAME)
@@ -88,23 +89,31 @@ $(call QUOTE_VARIABLE_LIST,$(QUOTED_VARIABLES))
 ##
 ## freetype
 ##
+FREETYPE_SRC_FIXED = $(FREETYPEPROTON)/.fixed
 FREETYPE_CONFIGURE_FILES32 = $(FREETYPE_OBJ32)/build.ninja
 FREETYPE_CONFIGURE_FILES64 = $(FREETYPE_OBJ64)/build.ninja
-FREETYPE_SRC_FIXED = $(FREETYPE)/.fixed
 FREETYPE_CMAKE_FLAGS = $(CMAKE_FLAGS) \
                -DWITH_PNG=OFF \
                -DWITH_HarfBuzz=OFF \
                -DBUILD_SHARED_LIBS:BOOL=true
 
 $(FREETYPE_SRC_FIXED):
-	sed -i -ebak '/protonfreetype/d' $(FREETYPE)/CMakeLists.txt
-	echo 'set_target_properties(freetype PROPERTIES OUTPUT_NAME protonfreetype)' >>$(FREETYPE)/CMakeLists.txt
+	rm -rf $(FREETYPEPROTON)
+	mkdir -p $(FREETYPEPROTON)
+	cd $(FREETYPEPROTON) && ln -sf $(FREETYPE)/* .
+	rm $(FREETYPEPROTON)/include
+	cp -a $(FREETYPE)/include $(FREETYPEPROTON)/
+	rm $(FREETYPEPROTON)/CMakeLists.txt
+	cp $(FREETYPE)/CMakeLists.txt $(FREETYPEPROTON)/
+	sed -i -ebak 's/^set(PNG_LIB_NAME png/set(PNG_LIB_NAME protonpng/' $(FREETYPEPROTON)/CMakeLists.txt
+	sed -i -ebak '/protonfreetype/d' $(FREETYPEPROTON)/CMakeLists.txt
+	echo 'set_target_properties(freetype PROPERTIES OUTPUT_NAME protonfreetype)' >>$(FREETYPEPROTON)/CMakeLists.txt
 	touch $(FREETYPE_SRC_FIXED)
 
 $(FREETYPE_CONFIGURE_FILES32): $(FREETYPE_SRC_FIXED)
 	mkdir -p $(FREETYPE_OBJ32)
 	cd $(dir $@) && \
-	    $(CMAKE_BIN32) $(FREETYPE) \
+	    $(CMAKE_BIN32) $(dir $<) \
 	        -DCMAKE_INSTALL_PREFIX="$(ABS_TOOLS_DIR32)" \
 	        $(FREETYPE_CMAKE_FLAGS) \
 	        -DCMAKE_C_FLAGS="-m32 $(CFLAGS)" -DCMAKE_CXX_FLAGS="-m32 $(CXXFLAGS)" \
@@ -113,21 +122,21 @@ $(FREETYPE_CONFIGURE_FILES32): $(FREETYPE_SRC_FIXED)
 $(FREETYPE_CONFIGURE_FILES64): $(FREETYPE_SRC_FIXED)
 	mkdir -p $(FREETYPE_OBJ64)
 	cd $(dir $@) && \
-	    $(CMAKE_BIN64) $(FREETYPE) \
+	    $(CMAKE_BIN64) $(dir $<) \
 	        -DCMAKE_INSTALL_PREFIX="$(ABS_TOOLS_DIR64)" \
 	        $(FREETYPE_CMAKE_FLAGS) \
 	        -DCMAKE_C_FLAGS="$(CFLAGS)" -DCMAKE_CXX_FLAGS="$(CXXFLAGS)" \
 	        -DCMAKE_SHARED_LINKER_FLAGS="$(LDFLAGS)"
 
 $(FREETYPE_OUT32): $(FREETYPE_CONFIGURE_FILES32)
-	ninja -C $(FREETYPE_OBJ32) install
+	ninja -C $(dir $<) install
 	mkdir -p $(DST_DIR)/lib
 	cp $(FREETYPE_OUT32) $(DST_DIR)/lib
 	install_name_tool -id $(ABS_TOOLS_DIR32)/lib/$(FREETYPE_SONAME) $(FREETYPE_OUT32)
 	[ x"$(STRIP)" = x ] || $(STRIP) $(DST_DIR)/lib/$(FREETYPE_SONAME)
 
 $(FREETYPE_OUT64): $(FREETYPE_CONFIGURE_FILES64)
-	ninja -C $(FREETYPE_OBJ64) install
+	ninja -C $(dir $<) install
 	mkdir -p $(DST_DIR)/lib64
 	cp $(FREETYPE_OUT64) $(DST_DIR)/lib64
 	install_name_tool -id $(ABS_TOOLS_DIR64)/lib/$(FREETYPE_SONAME) $(FREETYPE_OUT64)
